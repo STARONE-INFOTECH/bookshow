@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BookshowUserApplication {
+public class FoodOrderServiceApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BookshowUserApplication.class, args);

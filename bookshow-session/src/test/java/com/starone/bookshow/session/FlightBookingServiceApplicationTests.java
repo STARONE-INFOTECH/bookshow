@@ -1,10 +1,10 @@
-package com.starone.bookshow.user;
+package com.starone.bookshow.session;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class BookshowUserApplicationTests {
+class FlightBookingServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

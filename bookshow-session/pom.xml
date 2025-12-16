@@ -11,9 +11,9 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 	
-	<artifactId>bookshow-session</artifactId>
-	<name>bookshow-session</name>
-	<description>Session Management Bookshow Application</description>
+	<artifactId>flight-booking-service</artifactId>
+	<name>Flight Booking Service</name>
+	<description>Flight booking</description>
 	
     <dependencies>
 
