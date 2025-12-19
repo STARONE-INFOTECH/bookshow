@@ -1,0 +1,29 @@
+{
+  "rows": [
+    {
+      "rowId": "A",
+      "seats": [
+        { "seatNumber": "A1", "type": "NORMAL", "priceCategory": "SILVER", "aisle": false },
+        { "seatNumber": "A2", "type": "NORMAL", "priceCategory": "SILVER", "aisle": false },
+        { "seatNumber": "A3", "type": "GAP", "priceCategory": null, "aisle": true },
+        { "seatNumber": "A4", "type": "PREMIUM", "priceCategory": "GOLD", "aisle": false },
+        { "seatNumber": "A5", "type": "RECLINER", "priceCategory": "PLATINUM", "aisle": false }
+      ]
+    },
+    {
+      "rowId": "B",
+      "seats": [
+        { "seatNumber": "B1", "type": "RECLINER", "priceCategory": "PLATINUM", "aisle": false },
+        { "seatNumber": "B2", "type": "RECLINER", "priceCategory": "PLATINUM", "aisle": false }
+        
+      ]
+    }
+    
+  ],
+  "pricing": {
+    "SILVER": 180.0,
+    "GOLD": 250.0,
+    "PLATINUM": 350.0
+  },
+  "totalSeats": 150
+}
