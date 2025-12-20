@@ -8,12 +8,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.starone.bookshow.show.dto.ShowSeatResponseDto;
 import com.starone.bookshow.show.entity.ShowSeat;
 import com.starone.bookshow.show.mapper.IShowSeatMapper;
 import com.starone.bookshow.show.repository.IShowRepository;
 import com.starone.bookshow.show.repository.IShowSeatRepository;
 import com.starone.bookshow.show.service.IShowSeatService;
+import com.starone.common.dto.ShowSeatResponseDto;
 import com.starone.common.enums.SeatStatus;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.ConflictException;

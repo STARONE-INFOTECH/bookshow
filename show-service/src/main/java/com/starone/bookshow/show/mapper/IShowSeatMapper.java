@@ -2,8 +2,8 @@ package com.starone.bookshow.show.mapper;
 
 import org.mapstruct.Mapper;
 
-import com.starone.bookshow.show.dto.ShowSeatResponseDto;
 import com.starone.bookshow.show.entity.ShowSeat;
+import com.starone.common.dto.ShowSeatResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
 

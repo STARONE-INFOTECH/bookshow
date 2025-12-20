@@ -20,11 +20,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.show.dto.ShowRequestDto;
-import com.starone.bookshow.show.dto.ShowResponseDto;
-import com.starone.bookshow.show.dto.ShowSeatResponseDto;
 import com.starone.bookshow.show.service.IShowSeatService;
 import com.starone.bookshow.show.service.IShowService;
 import com.starone.common.dto.ApiResponse;
+import com.starone.common.dto.ShowResponseDto;
+import com.starone.common.dto.ShowSeatResponseDto;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

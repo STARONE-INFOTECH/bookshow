@@ -5,8 +5,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.show.dto.ShowRequestDto;
-import com.starone.bookshow.show.dto.ShowResponseDto;
 import com.starone.bookshow.show.entity.Show;
+import com.starone.common.dto.ShowResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
 

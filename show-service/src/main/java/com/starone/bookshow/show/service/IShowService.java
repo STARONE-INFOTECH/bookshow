@@ -8,8 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.show.dto.ShowRequestDto;
-import com.starone.bookshow.show.dto.ShowResponseDto;
-import com.starone.bookshow.show.dto.ShowSeatResponseDto;
+import com.starone.common.dto.ShowResponseDto;
+import com.starone.common.dto.ShowSeatResponseDto;
 
 public interface IShowService {
     /**

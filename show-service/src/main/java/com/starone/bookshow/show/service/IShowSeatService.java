@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.starone.bookshow.show.dto.ShowSeatResponseDto;
+import com.starone.common.dto.ShowSeatResponseDto;
 
 public interface IShowSeatService {
     /**
