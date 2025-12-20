@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
-import com.starone.bookshow.movie.dto.MovieResponseDto;
 import com.starone.bookshow.movie.service.IMovieService;
 import com.starone.common.dto.ApiResponse;
+import com.starone.common.dto.MovieResponseDto;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

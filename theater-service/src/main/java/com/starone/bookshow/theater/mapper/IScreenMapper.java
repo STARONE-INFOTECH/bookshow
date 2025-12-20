@@ -3,8 +3,8 @@ package com.starone.bookshow.theater.mapper;
 import org.mapstruct.Mapper;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.bookshow.theater.dto.ScreenResponseDto;
 import com.starone.bookshow.theater.entity.Screen;
+import com.starone.common.dto.ScreenResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
 

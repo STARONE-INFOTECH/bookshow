@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
-import com.starone.bookshow.theater.dto.TheaterResponseDto;
+import com.starone.common.dto.TheaterResponseDto;
 
 public interface ITheaterService {
     TheaterResponseDto create(TheaterRequestDto requestDto);

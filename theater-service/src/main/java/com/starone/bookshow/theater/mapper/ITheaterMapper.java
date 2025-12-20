@@ -5,8 +5,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
-import com.starone.bookshow.theater.dto.TheaterResponseDto;
 import com.starone.bookshow.theater.entity.Theater;
+import com.starone.common.dto.TheaterResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
 

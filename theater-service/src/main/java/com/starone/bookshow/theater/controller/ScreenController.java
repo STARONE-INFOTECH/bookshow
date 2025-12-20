@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.bookshow.theater.dto.ScreenResponseDto;
 import com.starone.bookshow.theater.service.IScreenService;
 import com.starone.common.dto.ApiResponse;
+import com.starone.common.dto.ScreenResponseDto;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

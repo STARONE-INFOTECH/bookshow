@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
-import com.starone.bookshow.movie.dto.MovieResponseDto;
+import com.starone.common.dto.MovieResponseDto;
 
 public interface IMovieService {
 

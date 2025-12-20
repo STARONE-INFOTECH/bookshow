@@ -5,8 +5,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
-import com.starone.bookshow.movie.dto.MovieResponseDto;
 import com.starone.bookshow.movie.entity.Movie;
+import com.starone.common.dto.MovieResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
 

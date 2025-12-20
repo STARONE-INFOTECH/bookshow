@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.bookshow.theater.dto.ScreenResponseDto;
+import com.starone.common.dto.ScreenResponseDto;
 
 public interface IScreenService {
     

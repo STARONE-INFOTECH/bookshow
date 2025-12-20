@@ -11,12 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
-import com.starone.bookshow.movie.dto.MovieResponseDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieCreditService;
 import com.starone.bookshow.movie.service.IMovieService;
+import com.starone.common.dto.MovieResponseDto;
 import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
 import com.starone.common.error.ErrorCodes;

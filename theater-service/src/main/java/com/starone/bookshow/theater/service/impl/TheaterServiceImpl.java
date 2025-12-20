@@ -9,12 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
-import com.starone.bookshow.theater.dto.TheaterResponseDto;
 import com.starone.bookshow.theater.entity.Theater;
 import com.starone.bookshow.theater.mapper.IScreenMapper;
 import com.starone.bookshow.theater.mapper.ITheaterMapper;
 import com.starone.bookshow.theater.repository.ITheaterRepository;
 import com.starone.bookshow.theater.service.ITheaterService;
+import com.starone.common.dto.TheaterResponseDto;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;

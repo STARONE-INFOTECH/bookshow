@@ -11,13 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.movie.client.PersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
-import com.starone.bookshow.movie.dto.MovieCreditResponseDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieCreditService;
+import com.starone.common.dto.MovieCreditResponseDto;
 import com.starone.common.dto.PersonResponseDto;
 import com.starone.common.enums.Profession;
 import com.starone.common.error.ErrorCodes;

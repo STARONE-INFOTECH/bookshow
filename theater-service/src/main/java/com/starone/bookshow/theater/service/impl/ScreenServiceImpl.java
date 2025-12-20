@@ -8,13 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.bookshow.theater.dto.ScreenResponseDto;
 import com.starone.bookshow.theater.entity.Screen;
 import com.starone.bookshow.theater.entity.Theater;
 import com.starone.bookshow.theater.mapper.IScreenMapper;
 import com.starone.bookshow.theater.repository.IScreenRepository;
 import com.starone.bookshow.theater.repository.ITheaterRepository;
 import com.starone.bookshow.theater.service.IScreenService;
+import com.starone.common.dto.ScreenResponseDto;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.NotFoundException;
