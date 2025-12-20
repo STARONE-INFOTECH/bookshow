@@ -1,8 +1,0 @@
-server:
-    port: 8081
-spring:
-    application:
-        name: food-order-service
-    data:
-        mongodb:
-            uri: mongodb://bookshowAdmin:Shree%40123@localhost:27018/bookshow_user_db?authSource=admin
