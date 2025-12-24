@@ -5,6 +5,10 @@ spring:
   profiles:
     active: dev
 
+  jackson:
+    mapper:
+      accept-case-insensitive-properties: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/person_db
     username: bookshow

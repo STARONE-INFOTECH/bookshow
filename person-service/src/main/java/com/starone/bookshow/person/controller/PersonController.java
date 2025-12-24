@@ -2,6 +2,8 @@ package com.starone.bookshow.person.controller;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -29,24 +31,26 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/persons")
 @RequiredArgsConstructor
 public class PersonController {
+    private static final Logger log = LoggerFactory.getLogger(PersonController.class);
     private final IPersonService personService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PersonResponseDto> create(@Valid @RequestBody PersonRequestDto requestDto) {
+        log.info("Received DTO - pAddress: {}, cAddress: {}", requestDto.getPAddress(), requestDto.getCAddress());
         PersonResponseDto response = personService.create(requestDto);
         return ApiResponse.success(response);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<PersonResponseDto> getById(@PathVariable UUID id) {
+    public ApiResponse<PersonResponseDto> getById(@PathVariable("id") UUID id) {
         PersonResponseDto response = personService.getById(id);
         return ApiResponse.success(response);
     }
 
     @PatchMapping("/{id}")
     public ApiResponse<PersonResponseDto> update(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody PersonRequestDto requestDto) {
         PersonResponseDto response = personService.update(id, requestDto);
         return ApiResponse.success(response);

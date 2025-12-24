@@ -2,6 +2,8 @@ package com.starone.bookshow.person.service.impl;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,15 +26,19 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class PersonServiceImpl implements IPersonService {
 
+    private static final Logger log = LoggerFactory.getLogger(PersonServiceImpl.class);
+
     private final PersonRepository personRepository;
     private final PersonMapper personMapper;
 
     @Override
     public PersonResponseDto create(PersonRequestDto requestDto) {
         if (personRepository.existsByNameIgnoreCase(requestDto.getName())) {
+            log.warn("Person with name ': {}' already exists.", requestDto.getName());
             throw new ConflictException(ErrorCodes.PERSON_ALREADY_EXISTS,
                     "Person with name '" + requestDto.getName() + "' already exists");
         }
+        log.info("CAddress : {} PAddress : {} ", requestDto.getCAddress(), requestDto.getPAddress());
         Person person = personMapper.toEntity(requestDto);
         person = personRepository.save(person);
         return personMapper.toResponseDto(person);

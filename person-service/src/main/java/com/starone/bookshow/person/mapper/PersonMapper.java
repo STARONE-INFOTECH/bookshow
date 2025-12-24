@@ -12,7 +12,6 @@ import com.starone.common.mapper.CommonMapperConfig;
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface PersonMapper extends BaseMapper<Person, PersonRequestDto, PersonRequestDto, PersonResponseDto> {
     // Automatic mapping for most fields (names match perfectly)
-
     // Response: include id and active (not in request DTO)
     @Override
     PersonResponseDto toResponseDto(Person person);
