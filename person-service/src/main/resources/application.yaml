@@ -1,3 +1,25 @@
 spring:
   application:
-    name: StarOne Bookshow Person Service
+    name: bookshow-person-service
+
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/person_db
+    username: bookshow
+    password: devpassword
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update   # or validate in prod
+    show-sql: true
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+LOG_DIR: logs
