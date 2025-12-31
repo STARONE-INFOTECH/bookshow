@@ -73,7 +73,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_validRequestWithCredits_savesAndReturnsResponse() {
+    void shouldSaveAndReturnEnrichedResponse_whenValidRequestWithCredits() {
         // Arrange (Given)
         Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
                 .map(MovieCredit::getPersonId)
@@ -118,7 +118,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_validRequestWithoutCredits_savesAndReturnsResponse() {
+    void shouldSaveAndReturnResponse_whenValidRequestWithoutCredits() {
         // Arrange (Given)
         validRequestDto.setMovieCredits(List.of());
         mappedMovie.setMovieCredits(List.of());
@@ -141,7 +141,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_withCredits_syncsBidirectionalRelationship() {
+    void shouldSyncBidirectionalRelationship_whenCreditsPresent() {
         // Arrange (Given)
         MovieCredit credit1 = mappedMovie.getMovieCredits().get(0);
         MovieCredit credit2 = mappedMovie.getMovieCredits().get(1);
@@ -163,7 +163,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_withCredits_callsPersonValidation() {
+    void shouldCallPersonValidation_whenCreditsPresent() {
         // Arrange (Given)
         Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
                 .map(MovieCredit::getPersonId)
@@ -185,7 +185,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_withNoCredits_doesNotCallPersonValidation() {
+    void shouldNotCallPersonValidation_whenNoCreditsProvided() {
         // Arrange (Given)
         validRequestDto.setMovieCredits(List.of());
         mappedMovie.setMovieCredits(List.of());
@@ -203,7 +203,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_invalidPersonIds_throwsBadRequest() {
+    void shouldThrowBadRequest_whenInvalidPersonIdsProvided() {
         // Arrange (Given)
         validRequestDto = TestDataFactory.createMovieRequestWithInvalidPersonId();
         mappedMovie = TestDataFactory.createMovieFromDto(validRequestDto);
@@ -224,7 +224,7 @@ class MovieServiceTest {
     }
 
     @Test
-    void create_personServiceReturnsErrorStatus_throwsBadRequest() {
+    void shouldThrowBadRequest_whenPersonServiceReturnsErrorStatus() {
         // Arrange (Given)
         Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
                 .map(MovieCredit::getPersonId)
