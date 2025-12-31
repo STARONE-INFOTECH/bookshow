@@ -1,6 +1,7 @@
 package com.starone.bookshow.movie.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,7 +55,7 @@ public class Movie {
     private List<Genre> genres;
 
     @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MovieCredit> movieCredits;
+    private List<MovieCredit> movieCredits = new ArrayList<>();
 
     private Integer durationMinutes;
 

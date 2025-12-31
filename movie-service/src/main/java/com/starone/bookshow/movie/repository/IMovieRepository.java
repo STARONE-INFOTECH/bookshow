@@ -19,13 +19,11 @@ public interface IMovieRepository extends JpaRepository<Movie, UUID> {
 
     Page<Movie> findByActiveFalse(Pageable pageable);
 
-    Page<Movie> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
-    boolean existsByNameIgnoreCase(String name);
+    boolean existsByTitleIgnoreCase(String title);
 
     boolean existsByTitleIgnoreCaseAndReleaseDate(String title, LocalDate releaseDate);
 
-    Optional<Movie> findByNameIgnoreCase(String name);
+    Optional<Movie> findByTitleIgnoreCase(String title);
 
     Page<Movie> findByActiveTrueAndReleaseDateLessThanEqual(LocalDate date, Pageable pageable);
 

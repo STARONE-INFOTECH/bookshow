@@ -1,5 +1,6 @@
 package com.starone.bookshow.person.controller;
 
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +50,12 @@ public class PersonController {
         return ApiResponse.success(response);
     }
 
+    @PostMapping("/validate")
+    public ApiResponse<Set<UUID>> validatePersonIds(@RequestBody Set<UUID> ids){
+        Set<UUID> exisitingIds = personService.findExistingIds(ids);
+        return ApiResponse.success(exisitingIds);
+    }
+
     @PatchMapping("/{id}")
     public ApiResponse<PersonResponseDto> update(
             @PathVariable("id") UUID id,
@@ -57,20 +65,20 @@ public class PersonController {
     }
 
     @PutMapping("/{id}/deactivate")
-    public ApiResponse<PersonResponseDto> deactivate(@PathVariable UUID id) {
+    public ApiResponse<PersonResponseDto> deactivate(@PathVariable("id") UUID id) {
         PersonResponseDto response = personService.deactivate(id);
         return ApiResponse.success(response);
     }
 
     @PutMapping("/{id}/activate")
-    public ApiResponse<PersonResponseDto> activate(@PathVariable UUID id) {
+    public ApiResponse<PersonResponseDto> activate(@PathVariable("id") UUID id) {
         PersonResponseDto response = personService.activate(id);
         return ApiResponse.success(response);
     }
 
     @GetMapping("/search")
     public ApiResponse<Page<PersonResponseDto>> searchByName(
-            @RequestParam String name,
+            @RequestParam ("name")String name,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         Page<PersonResponseDto> page = personService.searchByName(name, pageable);
         return ApiResponse.success(page);

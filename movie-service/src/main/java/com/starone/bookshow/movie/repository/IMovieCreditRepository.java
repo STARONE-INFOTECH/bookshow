@@ -2,6 +2,7 @@ package com.starone.bookshow.movie.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -22,10 +23,10 @@ public interface IMovieCreditRepository extends JpaRepository<MovieCredit, UUID>
     List<MovieCredit> findByPersonId(UUID personId);
 
     // Check duplicate role for same person in same movie
-    boolean existsByMovieIdAndPersonIdAndRoleInMovie(UUID movieId, UUID personId, Profession roleInMovie);
+    boolean existsByMovieIdAndPersonIdAndMovieCharacters(UUID movieId, UUID personId, Set<Profession> roleInMovie);
 
     // Find specific credit for validation/update
-    Optional<MovieCredit> findByMovieIdAndPersonIdAndRoleInMovie(UUID movieId, UUID personId, Profession roleInMovie);
+    Optional<MovieCredit> findByMovieIdAndPersonIdAndMovieCharacters(UUID movieId, UUID personId, Set<Profession> roleInMovie);
 
     // Optional: find by credit ID and movie ID for security
     Optional<MovieCredit> findByIdAndMovieId(UUID creditId, UUID movieId);

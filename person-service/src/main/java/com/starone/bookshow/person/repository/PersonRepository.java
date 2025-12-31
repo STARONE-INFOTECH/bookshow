@@ -1,17 +1,24 @@
 package com.starone.bookshow.person.repository;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.starone.bookshow.person.entity.Person;
 
 @Repository
 public interface PersonRepository extends JpaRepository<Person, UUID> {
+
+    // find person by ids
+    @Query("SELECT p.id FROM Person p WHERE p.id IN :ids")
+    Set<UUID> findExistingIds(@Param("ids") Set<UUID> ids);
 
     // Basic pagination for all persons
     Page<Person> findAll(Pageable pageable);

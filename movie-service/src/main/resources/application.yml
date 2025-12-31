@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: bookshow-movie-service
+
+  profiles:
+    active: dev
+
+  jackson:
+    mapper:
+      accept-case-insensitive-properties: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/movie_db
+    username: bookshow
+    password: devpassword
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update   # or validate in prod
+    show-sql: true
+
+server:
+  port: 8082
+
+LOG_DIR: logs
+logging:
+  level:
+    root: INFO
+

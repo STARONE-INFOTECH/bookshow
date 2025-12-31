@@ -19,14 +19,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MovieRequestDto {
-    private UUID id;
     private String title;
     private String originalTitle;
     private String synopsis;
 
     private List<Language> languages;
     private List<Genre> genres;
-    private List<MovieCreditResponseDto> movieCredits;
+    private List<MovieCreditRequestDto> movieCredits;
 
     private Integer durationMinutes;
     private Rating rating;
@@ -35,5 +34,4 @@ public class MovieRequestDto {
     private String posterUrl;
     private String trailerUrl;
 
-    private Boolean isActive;
 }

@@ -1,6 +1,7 @@
 package com.starone.bookshow.movie.service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -50,5 +51,5 @@ public interface IMovieCreditService {
     /**
      * Check if credit already exists (prevent duplicates)
      */
-    boolean existsCredit(UUID movieId, UUID personId, Profession role);
+    boolean existsCredit(UUID movieId, UUID personId, Set<Profession> roles);
 }

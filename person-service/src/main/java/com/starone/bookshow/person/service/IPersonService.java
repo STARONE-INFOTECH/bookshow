@@ -1,5 +1,6 @@
 package com.starone.bookshow.person.service;
 
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -19,6 +20,11 @@ public interface IPersonService {
      * Get person by ID (used by movie-service for enrichment, frontend for details)
      */
     PersonResponseDto getById(UUID id);
+
+    /**
+     * Find person's by ID's (used by movie-service for validation : bulk operation)
+     */
+    Set<UUID> findExistingIds(Set<UUID> ids);
 
     /**
      * Update person (partial - PATCH)

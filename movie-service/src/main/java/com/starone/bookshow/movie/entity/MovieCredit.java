@@ -1,10 +1,13 @@
 package com.starone.bookshow.movie.entity;
 
+import java.util.Set;
 import java.util.UUID;
 
 import com.starone.common.enums.Profession;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,11 +36,16 @@ public class MovieCredit {
     @Column(nullable = false)
     private UUID personId; // Reference to Person service
 
+    @ElementCollection(targetClass = Profession.class,fetch = FetchType.LAZY)
+    @CollectionTable(name = "movie_credit_professions",joinColumns = @JoinColumn(name="movie_credit_id"))
+    @Column(name = "professions", nullable = false)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Profession profession; // ACTOR, DIRECTOR, PRODUCER, etc.
+    private Set<Profession> professions; // ACTOR, DIRECTOR, PRODUCER, etc.
 
-    private String movieCharacter; // only for actors
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "movie_credit_characters", joinColumns = @JoinColumn(name= "movie_credit_id"))
+    @Column(name = "character_name", nullable = true)  // allow null/empty for uncredited
+    private Set<String> movieCharacters; // only for actors/actress
 
     private Integer billingOrder; // very useful for ordering cast
 

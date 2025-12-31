@@ -39,27 +39,27 @@ public class MovieController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<MovieResponseDto> getById(@PathVariable UUID id) {
+    public ApiResponse<MovieResponseDto> getById(@PathVariable("id") UUID id) {
         MovieResponseDto response = movieService.getById(id);
         return ApiResponse.success(response);
     }
 
     @PatchMapping("/{id}")
     public ApiResponse<MovieResponseDto> update(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody MovieRequestDto requestDto) {
         MovieResponseDto response = movieService.update(id, requestDto);
         return ApiResponse.success(response);
     }
 
     @PutMapping("/{id}/deactivate")
-    public ApiResponse<MovieResponseDto> deactivate(@PathVariable UUID id) {
+    public ApiResponse<MovieResponseDto> deactivate(@PathVariable("id") UUID id) {
         MovieResponseDto response = movieService.deactivate(id);
         return ApiResponse.success(response);
     }
 
     @PutMapping("/{id}/activate")
-    public ApiResponse<MovieResponseDto> activate(@PathVariable UUID id) {
+    public ApiResponse<MovieResponseDto> activate(@PathVariable("id") UUID id) {
         MovieResponseDto response = movieService.activate(id);
         return ApiResponse.success(response);
     }
@@ -95,7 +95,7 @@ public class MovieController {
 
     @GetMapping("/genre/{genre}")
     public ApiResponse<Page<MovieResponseDto>> filterByGenre(
-            @PathVariable String genre,
+            @PathVariable("genre") String genre,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<MovieResponseDto> page = movieService.filterByGenre(genre, pageable);
         return ApiResponse.success(page);
@@ -103,7 +103,7 @@ public class MovieController {
 
     @GetMapping("/language/{language}")
     public ApiResponse<Page<MovieResponseDto>> filterByLanguage(
-            @PathVariable String language,
+            @PathVariable("language") String language,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<MovieResponseDto> page = movieService.filterByLanguage(language, pageable);
         return ApiResponse.success(page);

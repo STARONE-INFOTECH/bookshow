@@ -35,7 +35,7 @@ public class MovieCreditController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MovieCreditResponseDto> addCredit(
-            @PathVariable UUID movieId,
+            @PathVariable("movieId") UUID movieId,
             @Valid @RequestBody MovieCreditRequestDto requestDto) {
         MovieCreditResponseDto response = movieCreditService.addCredit(movieId, requestDto);
         return ApiResponse.success(response);
@@ -43,8 +43,8 @@ public class MovieCreditController {
 
     @PatchMapping("/{creditId}")
     public ApiResponse<MovieCreditResponseDto> updateCredit(
-            @PathVariable UUID movieId,
-            @PathVariable UUID creditId,
+            @PathVariable("movieId") UUID movieId,
+            @PathVariable("creditId") UUID creditId,
             @Valid @RequestBody MovieCreditRequestDto requestDto) {
         // Note: movieId in path for security (ensure credit belongs to movie)
         MovieCreditResponseDto response = movieCreditService.updateCredit(creditId, requestDto);
@@ -53,20 +53,20 @@ public class MovieCreditController {
 
     @DeleteMapping("/{creditId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> removeCredit(@PathVariable UUID creditId) {
+    public ApiResponse<Void> removeCredit(@PathVariable("creditId") UUID creditId) {
         movieCreditService.removeCredit(creditId);
         return ApiResponse.success(null);
     }
 
     @GetMapping
-    public ApiResponse<List<MovieCreditResponseDto>> getCredits(@PathVariable UUID movieId) {
+    public ApiResponse<List<MovieCreditResponseDto>> getCredits(@PathVariable("movieId") UUID movieId) {
         List<MovieCreditResponseDto> credits = movieCreditService.getCreditsByMovieId(movieId);
         return ApiResponse.success(credits);
     }
 
     @GetMapping("/paginated")
     public ApiResponse<Page<MovieCreditResponseDto>> getCreditsPaginated(
-            @PathVariable UUID movieId,
+            @PathVariable("movieId") UUID movieId,
             @PageableDefault(size = 50, sort = "billingOrder") Pageable pageable) {
         Page<MovieCreditResponseDto> page = movieCreditService.getCreditsByMovieIdPaginated(movieId, pageable);
         return ApiResponse.success(page);
@@ -74,7 +74,7 @@ public class MovieCreditController {
 
     @PutMapping("/reorder")
     public ApiResponse<List<MovieCreditResponseDto>> reorderCredits(
-            @PathVariable UUID movieId,
+            @PathVariable("movieId") UUID movieId,
             @Valid @RequestBody List<MovieCreditRequestDto> orderedCredits) {
         List<MovieCreditResponseDto> reordered = movieCreditService.reorderCredits(movieId, orderedCredits);
         return ApiResponse.success(reordered);
