@@ -72,4 +72,20 @@ public class Movie {
 
     // private Integer totalReviews;
 
+    // =========================== Helper Methods ================================
+
+    public void addMovieCredit(MovieCredit movieCredit) {
+        if (movieCredit == null)
+            return;
+        if (!this.movieCredits.contains(movieCredit)) {
+            this.movieCredits.add(movieCredit);
+            movieCredit.setMovie(this);
+        }
+    }
+
+    public void removeMovieCredit(MovieCredit movieCredit) {
+        movieCredits.remove(movieCredit);
+        movieCredit.setMovie(null);
+    }
+
 }

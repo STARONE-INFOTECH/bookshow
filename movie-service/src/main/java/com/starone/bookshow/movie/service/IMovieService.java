@@ -6,35 +6,35 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
-import com.starone.common.dto.MovieResponseDto;
+import com.starone.common.response.record.MovieResponse;
 
 public interface IMovieService {
 
-    MovieResponseDto create(MovieRequestDto movieRequestDto);
+    MovieResponse create(MovieRequestDto movieRequestDto);
 
-    MovieResponseDto getById(UUID id);
+    MovieResponse getById(UUID id);
 
-    MovieResponseDto update(UUID id, MovieRequestDto movieRequestDto);
+    MovieResponse update(UUID id, MovieRequestDto movieRequestDto);
 
-    MovieResponseDto deactivate(UUID id);
+    MovieResponse deactivate(UUID id);
 
-    MovieResponseDto activate(UUID id);
+    MovieResponse activate(UUID id);
 
-    Page<MovieResponseDto> getNowShowing(Pageable pageable);
+    Page<MovieResponse> getNowShowing(Pageable pageable);
 
-    Page<MovieResponseDto> getUpcoming(Pageable pageable);
+    Page<MovieResponse> getUpcoming(Pageable pageable);
 
-    Page<MovieResponseDto> getAll(Pageable pageable);
+    Page<MovieResponse> getAll(Pageable pageable);
 
-    Page<MovieResponseDto> searchByTitle(String title, Pageable pageable);
+    Page<MovieResponse> searchByTitle(String title, Pageable pageable);
 
-    Page<MovieResponseDto> filterByGenre(String genre, Pageable pageable);
+    Page<MovieResponse> filterByGenre(String genre, Pageable pageable);
 
-    Page<MovieResponseDto> filterByLanguage(String language, Pageable pageable);
+    Page<MovieResponse> filterByLanguage(String language, Pageable pageable);
 
-    Page<MovieResponseDto> searchByName(String name, Pageable pageable);
+    Page<MovieResponse> searchByName(String name, Pageable pageable);
 
-    Page<MovieResponseDto> getAllActive(Pageable pageable);
+    Page<MovieResponse> getAllActive(Pageable pageable);
 
     boolean existsByNameIgnoreCase(String name);
 

@@ -19,8 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.service.IMovieService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.MovieResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.MovieResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,79 +34,79 @@ public class MovieController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<MovieResponseDto> create(@Valid @RequestBody MovieRequestDto requestDto) {
-        MovieResponseDto response = movieService.create(requestDto);
-        return ApiResponse.success(response);
+    public ApiResponse<MovieResponse> create(@Valid @RequestBody MovieRequestDto requestDto) {
+        MovieResponse response = movieService.create(requestDto);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<MovieResponseDto> getById(@PathVariable("id") UUID id) {
-        MovieResponseDto response = movieService.getById(id);
-        return ApiResponse.success(response);
+    public ApiResponse<MovieResponse> getById(@PathVariable("id") UUID id) {
+        MovieResponse response = movieService.getById(id);
+        return ApiResponses.success(response);
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse<MovieResponseDto> update(
+    public ApiResponse<MovieResponse> update(
             @PathVariable("id") UUID id,
             @Valid @RequestBody MovieRequestDto requestDto) {
-        MovieResponseDto response = movieService.update(id, requestDto);
-        return ApiResponse.success(response);
+        MovieResponse response = movieService.update(id, requestDto);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/deactivate")
-    public ApiResponse<MovieResponseDto> deactivate(@PathVariable("id") UUID id) {
-        MovieResponseDto response = movieService.deactivate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<MovieResponse> deactivate(@PathVariable("id") UUID id) {
+        MovieResponse response = movieService.deactivate(id);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/activate")
-    public ApiResponse<MovieResponseDto> activate(@PathVariable("id") UUID id) {
-        MovieResponseDto response = movieService.activate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<MovieResponse> activate(@PathVariable("id") UUID id) {
+        MovieResponse response = movieService.activate(id);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/now-showing")
-    public ApiResponse<Page<MovieResponseDto>> getNowShowing(
+    public ApiResponse<Page<MovieResponse>> getNowShowing(
             @PageableDefault(size = 20, sort = "releaseDate") Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.getNowShowing(pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.getNowShowing(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/upcoming")
-    public ApiResponse<Page<MovieResponseDto>> getUpcoming(
+    public ApiResponse<Page<MovieResponse>> getUpcoming(
             @PageableDefault(size = 20, sort = "releaseDate") Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.getUpcoming(pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.getUpcoming(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping
-    public ApiResponse<Page<MovieResponseDto>> getAll(
+    public ApiResponse<Page<MovieResponse>> getAll(
             @PageableDefault(size = 20, sort = "title") Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.getAll(pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.getAll(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/search")
-    public ApiResponse<Page<MovieResponseDto>> searchByTitle(
+    public ApiResponse<Page<MovieResponse>> searchByTitle(
             @RequestParam String title,
             @PageableDefault(size = 20, sort = "title") Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.searchByTitle(title, pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.searchByTitle(title, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/genre/{genre}")
-    public ApiResponse<Page<MovieResponseDto>> filterByGenre(
+    public ApiResponse<Page<MovieResponse>> filterByGenre(
             @PathVariable("genre") String genre,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.filterByGenre(genre, pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.filterByGenre(genre, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/language/{language}")
-    public ApiResponse<Page<MovieResponseDto>> filterByLanguage(
+    public ApiResponse<Page<MovieResponse>> filterByLanguage(
             @PathVariable("language") String language,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<MovieResponseDto> page = movieService.filterByLanguage(language, pageable);
-        return ApiResponse.success(page);
+        Page<MovieResponse> page = movieService.filterByLanguage(language, pageable);
+        return ApiResponses.success(page);
     }
 }

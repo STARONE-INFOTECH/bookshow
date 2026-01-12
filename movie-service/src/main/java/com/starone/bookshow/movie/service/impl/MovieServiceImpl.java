@@ -3,7 +3,9 @@ package com.starone.bookshow.movie.service.impl;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,22 +17,25 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.starone.bookshow.movie.client.PersonClient;
+import com.starone.bookshow.movie.client.IPersonClient;
+import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
+import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieCreditService;
 import com.starone.bookshow.movie.service.IMovieService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.MovieResponseDto;
 import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
-import com.starone.common.enums.Status;
+import com.starone.common.enums.Profession;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.MovieResponse;
+import com.starone.common.response.record.PersonProfessionSync;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,52 +47,57 @@ public class MovieServiceImpl implements IMovieService {
     private static final Logger log = LoggerFactory.getLogger(MovieServiceImpl.class);
     private final IMovieRepository movieRepository;
     private final IMovieMapper movieMapper;
-    private final PersonClient personClient;
+    private final IMovieCreditMapper creditMapper;
+    private final IPersonClient personClient;
     private final IMovieCreditService movieCreditService; // for enrichment
 
     @Override
-    public MovieResponseDto create(MovieRequestDto requestDto) {
+    public MovieResponse create(MovieRequestDto requestDto) {
+        if (requestDto == null) {
+            throw new BadRequestException(
+                    ErrorCodes.BAD_REQUEST,
+                    "Movie requestDto is null");
+        }
+        // Normalize credits to empty list if null (allow empty credits)
+        List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
+                .orElse(Collections.emptyList());
+
+        // Extract person IDs (safe even if credits is empty)
+        Set<UUID> personIds = credits.stream()
+                .map(MovieCreditRequestDto::getPersonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
         Movie movie = movieMapper.toEntity(requestDto);
-        List<MovieCredit> credits = movie.getMovieCredits();
-        Set<UUID> personIds = (credits == null || credits.isEmpty())
-                ? Collections.emptySet()
-                : credits.stream()
-                        .map(MovieCredit::getPersonId)
-                        .collect(Collectors.toSet());
 
-        if (!personIds.isEmpty()) {
-            ApiResponse<Set<UUID>> validPersonResponse = personClient.validatePersonIds(personIds);
-            if (!validPersonResponse.getStatus().equals(Status.SUCCESS)) {
-                throw new BadRequestException(ErrorCodes.MOVIE_INVALID_PERSON_IDS,
-                        "Person validation failed: " + validPersonResponse.getMessage());
-            }
-
-            // Batch call to Person service
-            Set<UUID> validIds = validPersonResponse.getData();
-
-            // Find Invalid Ids
-            Set<UUID> invalidIds = personIds.stream()
-                    .filter(id -> !validIds.contains(id))
-                    .collect(Collectors.toSet());
-
-            if (!invalidIds.isEmpty()) {
-                throw new BadRequestException(ErrorCodes.MOVIE_INVALID_PERSON_IDS,
-                        "The following person IDs do not exist: " + invalidIds +
-                                ". Please create the persons first or correct the IDs.");
-            }
-        }
-        // Sync the bidirectional relationship:
-        if (movie.getMovieCredits() != null && !movie.getMovieCredits().isEmpty()) {
-            movie.getMovieCredits().forEach(credit -> credit.setMovie(movie));
-        }
+        // Add credits if any
+        credits.forEach(creditRequest -> {
+            MovieCredit credit = creditMapper.toEntity(creditRequest);
+            movie.addMovieCredit(credit);
+        });
 
         Movie savedMovie = movieRepository.save(movie);
-        return enrichMovieResponse(savedMovie);
+        log.debug("Movie saved: {} [corr={}]", savedMovie.getId(), null);
+        
+        List<PersonProfessionSync> syncProfessions = syncProfessions(personIds, credits);
+        if (!syncProfessions.isEmpty()) {
+            try {
+                personClient.addProfessionsBulk(syncProfessions);
+                log.info("Synced {} professions [corr={}]", syncProfessions.size(), null);
+            } catch (Exception e) {
+                log.error("Failed to sync professions for movie {} [corr={}]", savedMovie.getId(), null, e);
+                throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Failed to sync professions for movie");
+            }
+
+        }
+
+        return movieMapper.toResponseDto(savedMovie);
+       
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MovieResponseDto getById(UUID id) {
+    public MovieResponse getById(UUID id) {
         Objects.requireNonNull(id, "Movie Id is required");
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> {
@@ -102,7 +112,7 @@ public class MovieServiceImpl implements IMovieService {
     }
 
     @Override
-    public MovieResponseDto update(UUID id, MovieRequestDto movieRequestDto) {
+    public MovieResponse update(UUID id, MovieRequestDto movieRequestDto) {
 
         Objects.requireNonNull(id, "Movie Id is required.");
         Movie existingMovie = movieRepository.findById(id)
@@ -119,72 +129,72 @@ public class MovieServiceImpl implements IMovieService {
     }
 
     @Override
-    public MovieResponseDto deactivate(UUID id) {
+    public MovieResponse deactivate(UUID id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
         movie.setActive(false);
         movie = movieRepository.save(movie);
-        return enrichMovieResponse(movie);
+        return movieMapper.toResponseDto(movie);
     }
 
     @Override
-    public MovieResponseDto activate(UUID id) {
+    public MovieResponse activate(UUID id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
         movie.setActive(true);
         movie = movieRepository.save(movie);
-        return enrichMovieResponse(movie);
+        return movieMapper.toResponseDto(movie);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> getNowShowing(Pageable pageable) {
+    public Page<MovieResponse> getNowShowing(Pageable pageable) {
         LocalDate today = LocalDate.now();
         Page<Movie> page = movieRepository.findByActiveTrueAndReleaseDateLessThanEqual(today, pageable);
-        return page.map(this::enrichMovieResponse);
+        return page.map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> getUpcoming(Pageable pageable) {
+    public Page<MovieResponse> getUpcoming(Pageable pageable) {
         LocalDate today = LocalDate.now();
         Page<Movie> page = movieRepository.findByActiveTrueAndReleaseDateGreaterThan(today, pageable);
-        return page.map(this::enrichMovieResponse);
+        return page.map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> getAll(Pageable pageable) {
+    public Page<MovieResponse> getAll(Pageable pageable) {
         return movieRepository.findAll(pageable)
                 .map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> searchByTitle(String title, Pageable pageable) {
+    public Page<MovieResponse> searchByTitle(String title, Pageable pageable) {
         Page<Movie> page = movieRepository.findByTitleContainingIgnoreCase(title, pageable);
-        return page.map(this::enrichMovieResponse);
+        return page.map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> filterByGenre(String genre, Pageable pageable) {
+    public Page<MovieResponse> filterByGenre(String genre, Pageable pageable) {
         Genre genreEnum = Genre.valueOf(genre.toUpperCase()); // or custom parsing
         Page<Movie> page = movieRepository.findByGenresContaining(genreEnum, pageable);
-        return page.map(this::enrichMovieResponse);
+        return page.map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> filterByLanguage(String language, Pageable pageable) {
+    public Page<MovieResponse> filterByLanguage(String language, Pageable pageable) {
         Language langEnum = Language.valueOf(language.toUpperCase());
         Page<Movie> page = movieRepository.findByLanguagesContaining(langEnum, pageable);
-        return page.map(this::enrichMovieResponse);
+        return page.map(movieMapper::toResponseDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> searchByName(String name, Pageable pageable) {
+    public Page<MovieResponse> searchByName(String name, Pageable pageable) {
         return movieRepository
                 .findByTitleContainingIgnoreCase(name, pageable)
                 .map(movieMapper::toResponseDto);
@@ -192,7 +202,7 @@ public class MovieServiceImpl implements IMovieService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MovieResponseDto> getAllActive(Pageable pageable) {
+    public Page<MovieResponse> getAllActive(Pageable pageable) {
         return movieRepository.findByActiveTrue(pageable)
                 .map(movieMapper::toResponseDto);
     }
@@ -215,11 +225,49 @@ public class MovieServiceImpl implements IMovieService {
         log.info("Movie deleted successfully. id={}", id);
     }
 
-    // Helper to enrich with credits (reuse from getById logic)
-    private MovieResponseDto enrichMovieResponse(Movie movie) {
-        MovieResponseDto dto = movieMapper.toResponseDto(movie);
-        log.info("setting movie credits");
-        dto.setMovieCredits(movieCreditService.getCreditsByMovieId(movie.getId()));
-        return dto;
+    /*
+     * =====================================================================
+     * --- Helper to enrich with credits (reuse from getById logic)----
+     * =====================================================================
+     */
+    private List<PersonProfessionSync> syncProfessions(Set<UUID> personIds, List<MovieCreditRequestDto> credits) {
+        // existing persons from person service
+        List<MovieCreditPersonResponse> persons = personClient.getAllPersonByIds(personIds);
+        if (persons.size() != personIds.size()) {
+            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Missing persons ");
+        }
+
+        // map of existing professions
+        Map<UUID, Set<Profession>> existingProfessionMap = persons.stream()
+                .collect(Collectors.toMap(
+                        MovieCreditPersonResponse::id,
+                        p -> Set.copyOf(p.professions())));
+
+        // map of requested professions
+        Map<UUID, Set<Profession>> requestedProfessionMap = credits.stream()
+                .collect(Collectors.toMap(
+                        MovieCreditRequestDto::getPersonId,
+                        MovieCreditRequestDto::getProfessions));
+
+        return requestedProfessionMap.entrySet().stream()
+                .map(entry -> {
+                    UUID personId = entry.getKey();
+                    Set<Profession> requested = entry.getValue(); // new profession
+
+                    Set<Profession> existing = existingProfessionMap
+                            .getOrDefault(personId, Set.of());
+
+                    // Professions that are requested but not already present
+                    Set<Profession> newOnes = requested.stream()
+                            .filter(p -> !existing.contains(p))
+                            .collect(Collectors.toSet());
+
+                    return newOnes.isEmpty()
+                            ? null
+                            : new PersonProfessionSync(personId, newOnes);
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
+
 }

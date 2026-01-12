@@ -2,9 +2,7 @@ package com.starone.bookshow.movie.dto;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
-import com.starone.common.dto.MovieCreditResponseDto;
 import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
 import com.starone.common.enums.Rating;

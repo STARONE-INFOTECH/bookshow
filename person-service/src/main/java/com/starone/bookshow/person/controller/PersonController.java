@@ -1,5 +1,6 @@
 package com.starone.bookshow.person.controller;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -9,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,8 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.service.IPersonService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.PersonResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.PersonResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,63 +40,69 @@ public class PersonController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<PersonResponseDto> create(@Valid @RequestBody PersonRequestDto requestDto) {
+    public ApiResponse<PersonResponse> create(@Valid @RequestBody PersonRequestDto requestDto) {
         log.info("Received DTO - pAddress: {}, cAddress: {}", requestDto.getPAddress(), requestDto.getCAddress());
-        PersonResponseDto response = personService.create(requestDto);
-        return ApiResponse.success(response);
+        PersonResponse response = personService.create(requestDto);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<PersonResponseDto> getById(@PathVariable("id") UUID id) {
-        PersonResponseDto response = personService.getById(id);
-        return ApiResponse.success(response);
+    public ApiResponse<PersonResponse> getById(@PathVariable("id") UUID id) {
+        PersonResponse response = personService.getById(id);
+        return ApiResponses.success(response);
     }
 
-    @PostMapping("/validate")
-    public ApiResponse<Set<UUID>> validatePersonIds(@RequestBody Set<UUID> ids){
-        Set<UUID> exisitingIds = personService.findExistingIds(ids);
-        return ApiResponse.success(exisitingIds);
+    @GetMapping("/credit-info/{id}")
+    public ApiResponse<MovieCreditPersonResponse> getPersonById(@PathVariable("id") UUID id) {
+        MovieCreditPersonResponse existingPerson = personService.getPersonById(id);
+        return ApiResponses.success(existingPerson);
+    }
+
+    @GetMapping("/by-ids")
+    public ApiResponse<List<MovieCreditPersonResponse>> getAllByIds(@RequestBody Set<UUID> ids) {
+        List<MovieCreditPersonResponse> existingPersons = personService.getAllByIds(ids);
+        return ApiResponses.success(existingPersons);
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse<PersonResponseDto> update(
+    public ApiResponse<PersonResponse> update(
             @PathVariable("id") UUID id,
             @Valid @RequestBody PersonRequestDto requestDto) {
-        PersonResponseDto response = personService.update(id, requestDto);
-        return ApiResponse.success(response);
+        PersonResponse response = personService.update(id, requestDto);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/deactivate")
-    public ApiResponse<PersonResponseDto> deactivate(@PathVariable("id") UUID id) {
-        PersonResponseDto response = personService.deactivate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<PersonResponse> deactivate(@PathVariable("id") UUID id) {
+        PersonResponse response = personService.deactivate(id);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/activate")
-    public ApiResponse<PersonResponseDto> activate(@PathVariable("id") UUID id) {
-        PersonResponseDto response = personService.activate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<PersonResponse> activate(@PathVariable("id") UUID id) {
+        PersonResponse response = personService.activate(id);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/search")
-    public ApiResponse<Page<PersonResponseDto>> searchByName(
-            @RequestParam ("name")String name,
+    public ApiResponse<Page<PersonResponse>> searchByName(
+            @RequestParam("name") String name,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<PersonResponseDto> page = personService.searchByName(name, pageable);
-        return ApiResponse.success(page);
+        Page<PersonResponse> page = personService.searchByName(name, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/active")
-    public ApiResponse<Page<PersonResponseDto>> getAllActive(
+    public ApiResponse<Page<PersonResponse>> getAllActive(
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<PersonResponseDto> page = personService.getAllActive(pageable);
-        return ApiResponse.success(page);
+        Page<PersonResponse> page = personService.getAllActive(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping
-    public ApiResponse<Page<PersonResponseDto>> getAll(
+    public ApiResponse<Page<PersonResponse>> getAll(
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<PersonResponseDto> page = personService.getAll(pageable);
-        return ApiResponse.success(page);
+        Page<PersonResponse> page = personService.getAll(pageable);
+        return ApiResponses.success(page);
     }
 }

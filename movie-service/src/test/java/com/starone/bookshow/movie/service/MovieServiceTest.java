@@ -1,43 +1,49 @@
 package com.starone.bookshow.movie.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.starone.bookshow.movie.client.PersonClient;
+import com.starone.bookshow.movie.client.IPersonClient;
+import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.helper.TestDataFactory;
+import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.impl.MovieServiceImpl;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.MovieCreditResponseDto;
-import com.starone.common.dto.MovieResponseDto;
+import com.starone.common.enums.Profession;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.MovieResponse;
+import com.starone.common.response.record.PersonProfessionSync;
 
 @ExtendWith(MockitoExtension.class)
 class MovieServiceTest {
@@ -49,7 +55,10 @@ class MovieServiceTest {
     private IMovieMapper movieMapper;
 
     @Mock
-    private PersonClient personClient;
+    private IMovieCreditMapper creditMapper;
+
+    @Mock
+    private IPersonClient personClient;
 
     @Mock
     private IMovieCreditService movieCreditService;
@@ -58,7 +67,7 @@ class MovieServiceTest {
     private MovieServiceImpl movieService;
 
     private MovieRequestDto validRequestDto;
-    private MovieResponseDto expectedResponseDto;
+    private MovieResponse expectedResponseDto;
     private Movie mappedMovie;
     private Movie savedMovie;
 
@@ -66,179 +75,194 @@ class MovieServiceTest {
     void setUp() {
         validRequestDto = TestDataFactory.createValidMovieRequestDto();
         mappedMovie = TestDataFactory.createMovieFromDto(validRequestDto);
+
         savedMovie = TestDataFactory.createMovieFromDto(validRequestDto);
         savedMovie.setId(UUID.randomUUID());
         savedMovie.setActive(true);
+
         expectedResponseDto = TestDataFactory.createResponseFromMovie(savedMovie);
     }
+    // ==================== CREATE TESTS ====================
 
-    @Test
-    void shouldSaveAndReturnEnrichedResponse_whenValidRequestWithCredits() {
-        // Arrange (Given)
-        Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
-                .map(MovieCredit::getPersonId)
-                .collect(Collectors.toSet());
+    @Nested
+    @DisplayName("create() method tests")
+    class CreateTests {
+        @Test
+        void create_nullDto_throwBadRequest() {
+            // Arrange (Given)
+            BadRequestException ex = assertThrows(BadRequestException.class, () -> movieService.create(null));
 
-        // Let mapper do its job
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
+            assertEquals(ErrorCodes.BAD_REQUEST, ex.getErrorCode());
+            assertEquals("Movie requestDto is null", ex.getMessage());
 
-        // Person service validates successfully
-        when(personClient.validatePersonIds(personIds)).thenReturn(ApiResponse.success(personIds));
+            verifyNoInteractions(movieMapper, movieRepository);
 
-        // Repository saves and returns the entity with ID
-        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
+        }
 
-        // IMPORTANT: Stub the enrichment dependency
-        MovieResponseDto baseDto = new MovieResponseDto();
-        baseDto.setId(savedMovie.getId());
-        baseDto.setTitle(savedMovie.getTitle());
-        baseDto.setDurationMinutes(148);
-        when(movieMapper.toResponseDto(any(Movie.class))).thenReturn(baseDto);
+        @Test
+        void create_success_validMovieRequestDto() {
+            // Arrange
+            when(movieMapper.toEntity(any())).thenReturn(mappedMovie);
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(any())).thenReturn(expectedResponseDto);
+            when(personClient.getAllPersonByIds(anySet()))
+                    .thenReturn(TestDataFactory.createPersonsWithMissingProfessions());
+            // Act
+            MovieResponse result = movieService.create(validRequestDto);
 
-        List<MovieCreditResponseDto> enrichedCredits = TestDataFactory.createResponseFromMovie(savedMovie)
-                .getMovieCredits();
-        when(movieCreditService.getCreditsByMovieId(savedMovie.getId())).thenReturn(enrichedCredits);
+            // Assert
+            assertEquals(expectedResponseDto, result);
+            verify(movieMapper).toEntity(validRequestDto);
+            verify(movieRepository).save(mappedMovie);
+            verify(movieMapper).toResponseDto(savedMovie);
+        }
 
-        // Act (When)
-        MovieResponseDto result = movieService.create(validRequestDto);
+        @Test
+        void create_success_nullCredits_normalizedToEmpty() {
+            // Arrange
+            validRequestDto.setMovieCredits(null);
+            mappedMovie = TestDataFactory.createMovieFromDto(validRequestDto);
+            expectedResponseDto = TestDataFactory.createResponseFromMovie(savedMovie);
 
-        // Assert (Then) - State verification
-        assertNotNull(result);
-        assertEquals(savedMovie.getId(), result.getId());
-        assertEquals("Inception", result.getTitle());
-        assertEquals(148, result.getDurationMinutes());
-        assertNotNull(result.getMovieCredits());
-        assertEquals(2, result.getMovieCredits().size()); // assuming 2 credits in test data
+            when(movieMapper.toEntity(any())).thenReturn(mappedMovie);
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(any())).thenReturn(expectedResponseDto);
+            // Act
 
-        // Behavior verification
-        verify(movieRepository).save(argThat(movie -> movie != null &&
-                movie.getTitle().equals("Inception")));
-        verify(personClient).validatePersonIds(personIds);
-        verify(movieCreditService).getCreditsByMovieId(savedMovie.getId());
+            MovieResponse result = movieService.create(validRequestDto);
+            // Assert
+            assertEquals(expectedResponseDto, result);
+            verify(creditMapper, never()).toEntity(any());
+            verify(movieRepository).save(argThat(movie -> movie.getMovieCredits().isEmpty()));
+        }
+
+        @Test
+        void create_success_creditsAdded_personIdsExtracted() {
+            // Arrange
+            mappedMovie = TestDataFactory.createMovieWithEmptyCredits(validRequestDto);
+            when(movieMapper.toEntity(any())).thenReturn(mappedMovie);
+            when(creditMapper.toEntity(any(MovieCreditRequestDto.class)))
+                    .thenAnswer(invocation -> {
+                        MovieCreditRequestDto req = invocation.getArgument(0);
+                        return TestDataFactory.createMovieCreditFromDto(req); // ← new instance each call
+                    });
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(any())).thenReturn(expectedResponseDto);
+            when(personClient.getAllPersonByIds(anySet()))
+                    .thenReturn(TestDataFactory.createPersonsWithAllProfessions());
+            // Act
+            MovieResponse result = movieService.create(validRequestDto);
+
+            // Assert
+            assertEquals(expectedResponseDto, result);
+            verify(creditMapper, times(2)).toEntity(any());
+            ArgumentCaptor<Movie> captor = ArgumentCaptor.forClass(Movie.class);
+            verify(movieRepository).save(captor.capture());
+            assertEquals(2, captor.getValue().getMovieCredits().size());
+            assertSame(captor.getValue(), captor.getValue().getMovieCredits().get(0).getMovie());
+        }
+
+        @Test
+        void create_success_newProfessions_synced() {
+            // Arrange
+            when(movieMapper.toEntity(any())).thenReturn(mappedMovie);
+            when(creditMapper.toEntity(any()))
+                    .thenReturn(TestDataFactory.createMovieCreditFromDto(validRequestDto.getMovieCredits().get(0)));
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(any())).thenReturn(expectedResponseDto);
+
+            when(personClient.getAllPersonByIds(anySet()))
+                    .thenReturn(TestDataFactory.createPersonsWithMissingProfessions());
+
+            // Act
+            MovieResponse result = movieService.create(validRequestDto);
+
+            // Assert
+            assertEquals(expectedResponseDto, result);
+            verify(personClient).addProfessionsBulk(argThat(list -> !list.isEmpty()));
+        }
+
+        @Test
+        void create_success_noNewProfessions() {
+            //Arrange
+            validRequestDto.getMovieCredits().get(0).setProfessions(Set.of(Profession.ACTOR));
+            mappedMovie.getMovieCredits().forEach(credit -> System.out.println("Profession Mapped :"+credit.getProfessions()));
+            when(movieMapper.toEntity(any())).thenReturn(mappedMovie);
+            when(creditMapper.toEntity(any()))
+                .thenReturn(TestDataFactory.createMovieCreditFromDto(validRequestDto.getMovieCredits().get(0)));
+
+            validRequestDto.getMovieCredits().forEach(credit -> System.out.println("Profession request dto:"+credit.getProfessions()));
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            savedMovie.getMovieCredits().forEach(credit -> System.out.println("Profession saved :"+credit.getProfessions()));
+            when(movieMapper.toResponseDto(any())).thenReturn(expectedResponseDto);
+            expectedResponseDto.movieCredits().forEach(credit -> System.out.println("Profession response :"+credit.professions()));
+            when(personClient.getAllPersonByIds(anySet()))
+            .thenAnswer(invocation ->{
+                Set<UUID> ids = invocation.getArgument(0);
+                List<MovieCreditPersonResponse> persons = new ArrayList<>();
+                for(UUID id : ids){
+                    persons.add(new MovieCreditPersonResponse(
+                        id, 
+                        "Person "+id, 
+                        "img.jpeg", 
+                        Set.of(Profession.ACTOR, Profession.DIRECTOR)
+                    ));
+                }
+                return persons;
+            });
+            
+            //Act
+            MovieResponse result = movieService.create(validRequestDto);
+            result.movieCredits().forEach(credit -> System.out.println("Profession result dto:"+credit.professions()));
+
+            //Assert
+            assertEquals(expectedResponseDto, result);
+            verify(personClient, never()).addProfessionsBulk(anyList());
+
+        }
     }
 
-    @Test
-    void shouldSaveAndReturnResponse_whenValidRequestWithoutCredits() {
-        // Arrange (Given)
-        validRequestDto.setMovieCredits(List.of());
-        mappedMovie.setMovieCredits(List.of());
-
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
-        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
-
-        when(movieMapper.toResponseDto(savedMovie)).thenReturn(expectedResponseDto);
-        // No credits → enrichment should return empty list
-        when(movieCreditService.getCreditsByMovieId(savedMovie.getId()))
-                .thenReturn(Collections.emptyList());
-
-        // Act (When)
-        MovieResponseDto result = movieService.create(validRequestDto);
-
-        // Assert (Then)
-        assertNotNull(result);
-        assertEquals(expectedResponseDto, result);
-        verify(movieRepository).save(mappedMovie);
+    // ==================== READ / GET TESTS ====================
+    @Nested
+    @DisplayName("getById() and retrieval tests")
+    class RetrievalTests {
+        /*
+         * @Test
+         * void shouldReturnMovie_whenIdExists() { ... }
+         * 
+         * @Test
+         * void shouldThrowNotFound_whenIdNotExists() { ... }
+         */
     }
 
-    @Test
-    void shouldSyncBidirectionalRelationship_whenCreditsPresent() {
-        // Arrange (Given)
-        MovieCredit credit1 = mappedMovie.getMovieCredits().get(0);
-        MovieCredit credit2 = mappedMovie.getMovieCredits().get(1);
-        Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
-                .map(MovieCredit::getPersonId)
-                .collect(Collectors.toSet());
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
-        when(personClient.validatePersonIds(personIds)).thenReturn(ApiResponse.success(personIds));
-        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
-
-        when(movieMapper.toResponseDto(any(Movie.class))).thenReturn(new MovieResponseDto());
-        when(movieCreditService.getCreditsByMovieId(any(UUID.class))).thenReturn(Collections.emptyList());
-        // Act (When)
-        movieService.create(validRequestDto);
-
-        // Assert (Then)
-        assertSame(mappedMovie, credit1.getMovie());
-        assertSame(mappedMovie, credit2.getMovie());
+    // ==================== UPDATE TESTS ====================
+    @Nested
+    @DisplayName("update() method tests")
+    class UpdateTests {
+        // update(), activate(), deactivate() tests
     }
 
-    @Test
-    void shouldCallPersonValidation_whenCreditsPresent() {
-        // Arrange (Given)
-        Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
-                .map(MovieCredit::getPersonId)
-                .collect(Collectors.toSet());
-
-        when(movieMapper.toEntity(validRequestDto))
-                .thenReturn(mappedMovie);
-        when(personClient.validatePersonIds(personIds))
-                .thenReturn(ApiResponse.success(personIds));
-        when(movieRepository.save(any(Movie.class))).thenReturn(savedMovie);
-
-        when(movieMapper.toResponseDto(savedMovie)).thenReturn(expectedResponseDto);
-        when(movieCreditService.getCreditsByMovieId(any(UUID.class))).thenReturn(Collections.emptyList());
-        // Act (When)
-        movieService.create(validRequestDto);
-
-        // Assert (Then)
-        verify(personClient).validatePersonIds(personIds);
+    // ==================== QUERY / PAGINATION TESTS ====================
+    @Nested
+    @DisplayName("Pagination and filtering tests")
+    class QueryTests {
+        /*
+         * @Test
+         * void shouldReturnNowShowingMovies() { ... }
+         * 
+         * @Test
+         * void shouldReturnUpcomingMovies() { ... }
+         * 
+         * @Test
+         * void shouldFilterByGenre() { ... }
+         */
+        // ... getAll, search, filter tests
     }
 
-    @Test
-    void shouldNotCallPersonValidation_whenNoCreditsProvided() {
-        // Arrange (Given)
-        validRequestDto.setMovieCredits(List.of());
-        mappedMovie.setMovieCredits(List.of());
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
-        when(movieRepository.save(mappedMovie)).thenReturn(savedMovie);
-
-        when(movieMapper.toResponseDto(savedMovie)).thenReturn(expectedResponseDto);
-        when(movieCreditService.getCreditsByMovieId(any(UUID.class))).thenReturn(Collections.emptyList());
-        // Act (When)
-        movieService.create(validRequestDto);
-
-        // Assert (Then)
-        verify(personClient, never()).validatePersonIds(anySet());
-        verify(movieRepository).save(mappedMovie);
-    }
-
-    @Test
-    void shouldThrowBadRequest_whenInvalidPersonIdsProvided() {
-        // Arrange (Given)
-        validRequestDto = TestDataFactory.createMovieRequestWithInvalidPersonId();
-        mappedMovie = TestDataFactory.createMovieFromDto(validRequestDto);
-        Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
-                .map(MovieCredit::getPersonId)
-                .collect(Collectors.toSet());
-
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
-        when(personClient.validatePersonIds(personIds))
-                .thenReturn(ApiResponse.success(Collections.emptySet()));
-
-        // Act (When)
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> movieService.create(validRequestDto));
-
-        // Assert (Then)
-        assertEquals(ErrorCodes.MOVIE_INVALID_PERSON_IDS, ex.getErrorCode());
-        assertTrue(ex.getMessage().contains("The following person IDs do not exist: "));
-    }
-
-    @Test
-    void shouldThrowBadRequest_whenPersonServiceReturnsErrorStatus() {
-        // Arrange (Given)
-        Set<UUID> personIds = mappedMovie.getMovieCredits().stream()
-                .map(MovieCredit::getPersonId)
-                .collect(Collectors.toSet());
-        when(movieMapper.toEntity(validRequestDto)).thenReturn(mappedMovie);
-
-        ApiResponse<Set<UUID>> errorResponse = ApiResponse.error(ErrorCodes.MOVIE_INVALID_PERSON_IDS,
-                "Person service temporary error");
-        when(personClient.validatePersonIds(personIds)).thenReturn(errorResponse);
-
-        // Act (When)
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> movieService.create(validRequestDto));
-
-        // Assert (Then)
-        assertTrue(ex.getMessage().contains("Person validation failed:"));
+    // ==================== DELETE TESTS ====================
+    @Nested
+    @DisplayName("delete() method tests")
+    class DeleteTests {
+        // ...
     }
 }

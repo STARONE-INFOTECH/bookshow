@@ -6,16 +6,16 @@ import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
-import com.starone.common.dto.MovieResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
+import com.starone.common.response.record.MovieResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
-public interface IMovieMapper extends BaseMapper<Movie, MovieRequestDto, MovieRequestDto, MovieResponseDto> {
+public interface IMovieMapper extends BaseMapper<Movie, MovieRequestDto, MovieRequestDto, MovieResponse> {
 
     // Response: include id and active (not in request DTO)
     @Override
-    MovieResponseDto toResponseDto(Movie movie);
+    MovieResponse toResponseDto(Movie movie);
 
     // Create: ignore id and active
     @Mapping(target = "id", ignore = true)

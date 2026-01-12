@@ -1,20 +1,27 @@
 package com.starone.bookshow.person.mapper;
 
+import java.util.List;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.entity.Person;
-import com.starone.common.dto.PersonResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.PersonResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
-public interface PersonMapper extends BaseMapper<Person, PersonRequestDto, PersonRequestDto, PersonResponseDto> {
+public interface IPersonMapper extends BaseMapper<Person, PersonRequestDto, PersonRequestDto, PersonResponse> {
     // Automatic mapping for most fields (names match perfectly)
     // Response: include id and active (not in request DTO)
     @Override
-    PersonResponseDto toResponseDto(Person person);
+    PersonResponse toResponseDto(Person person);
+
+    MovieCreditPersonResponse toMovieCreditResponseDto(Person person);
+
+    List<MovieCreditPersonResponse> toMovieCreditResponseDtos(List<Person> persons);
 
     // Create: ignore id and active
     @Mapping(target = "id", ignore = true)

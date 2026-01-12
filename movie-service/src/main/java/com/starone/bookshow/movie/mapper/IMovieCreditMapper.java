@@ -6,17 +6,17 @@ import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.entity.MovieCredit;
-import com.starone.common.dto.MovieCreditResponseDto;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
+import com.starone.common.response.record.MovieCreditResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface IMovieCreditMapper
-        extends BaseMapper<MovieCredit, MovieCreditRequestDto, MovieCreditRequestDto, MovieCreditResponseDto> {
+        extends BaseMapper<MovieCredit, MovieCreditRequestDto, MovieCreditRequestDto, MovieCreditResponse> {
 
     // Basic mapping - fields match directly
     @Override
-    MovieCreditResponseDto toResponseDto(MovieCredit entity);
+    MovieCreditResponse toResponseDto(MovieCredit entity);
     
     // Ignore fields not in request DTO
     @Mapping(target = "id", ignore = true)

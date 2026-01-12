@@ -1,9 +1,12 @@
 package com.starone.bookshow.person.service.impl;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.entity.Person;
-import com.starone.bookshow.person.mapper.PersonMapper;
-import com.starone.bookshow.person.repository.PersonRepository;
+import com.starone.bookshow.person.mapper.IPersonMapper;
+import com.starone.bookshow.person.projection.PersonMovieCreditProjection;
+import com.starone.bookshow.person.repository.IPersonRepository;
 import com.starone.bookshow.person.service.IPersonService;
-import com.starone.common.dto.PersonResponseDto;
+import com.starone.common.enums.Profession;
 import com.starone.common.error.ErrorCodes;
+import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.PersonProfessionSync;
+import com.starone.common.response.record.PersonResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,11 +39,11 @@ public class PersonServiceImpl implements IPersonService {
 
     private static final Logger log = LoggerFactory.getLogger(PersonServiceImpl.class);
 
-    private final PersonRepository personRepository;
-    private final PersonMapper personMapper;
+    private final IPersonRepository personRepository;
+    private final IPersonMapper personMapper;
 
     @Override
-    public PersonResponseDto create(PersonRequestDto requestDto) {
+    public PersonResponse create(PersonRequestDto requestDto) {
         String personName = requestDto.getName();
 
         // check person is already avaiable
@@ -63,10 +71,85 @@ public class PersonServiceImpl implements IPersonService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public PersonResponseDto getById(UUID id) {
+    public List<MovieCreditPersonResponse> getAllByIds(Set<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Invalid person id reference");
+        }
+        List<PersonMovieCreditProjection> persons = personRepository.findAllByIdIn(ids);
+        if (persons.size() != ids.size()) {
+            Set<UUID> foundIds = persons.stream()
+                    .map(PersonMovieCreditProjection::getId)
+                    .collect(Collectors.toSet());
+            Set<UUID> missingIds = new HashSet<>(ids);
+            missingIds.removeAll(foundIds);
 
-        Objects.requireNonNull(id, "Person ID is required");
+            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Persons not found: " + missingIds);
+        }
+        return persons.stream()
+                .map(person -> {
+                    return new MovieCreditPersonResponse(
+                            person.getId(),
+                            person.getName(),
+                            person.getProfileImg(),
+                            person.getProfessions());
+                })
+                .toList();
+    }
+
+    @Override
+    public MovieCreditPersonResponse getPersonById(UUID id) {
+        if (id == null) {
+            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Person Id is required");
+        }
+        return personRepository.findPersonById(id).map(person -> {
+            return new MovieCreditPersonResponse(person.getId(),
+                    person.getName(),
+                    person.getProfileImg(),
+                    person.getProfessions());
+        }).orElseThrow(() -> new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Person not found"));
+    }
+
+    @Override
+    public void addProfessionsBulk(List<PersonProfessionSync> bulkUpdates) {
+        if (bulkUpdates == null || bulkUpdates.isEmpty()) {
+            throw new BadRequestException(ErrorCodes.BAD_REQUEST,
+                    "PersonProfessionBulkUpdateDto must not be null or invalid");
+        }
+        // ONE DB call — fetches all persons
+        Set<UUID> personIds = bulkUpdates.stream()
+                .map(PersonProfessionSync::personId)
+                .collect(Collectors.toSet());
+
+        // ONE DB call — fetches all persons
+        Map<UUID, Person> personMap = personRepository.findAllById(personIds)
+                .stream()
+                .collect(Collectors.toMap(Person::getId, p -> p));
+
+        // Check missing persons early
+        Set<UUID> missingIds = personIds.stream()
+                .filter(id -> !personMap.containsKey(id))
+                .collect(Collectors.toSet());
+        if (!missingIds.isEmpty()) {
+            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND,
+                    "Person(s) not found " + missingIds);
+        }
+
+        // Apply updates
+        for (PersonProfessionSync update : bulkUpdates) {
+            Person person = personMap.get(update.personId());
+            Set<Profession> toAdd = update.professions();
+            if (toAdd != null && !toAdd.isEmpty()) {
+                person.getProfessions().addAll(toAdd);
+            }
+
+        }
+        // All changes saved in one transaction
+        log.info("Bulk added professions for {} persons", bulkUpdates.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PersonResponse getById(UUID id) {
 
         // INFO: Important business event — retrieving a person record
         log.info("Fetching person by ID: {}", id);
@@ -85,13 +168,7 @@ public class PersonServiceImpl implements IPersonService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Set<UUID> findExistingIds(Set<UUID> ids) {
-        return personRepository.findExistingIds(ids);
-    }
-
-    @Override
-    public PersonResponseDto update(UUID id, PersonRequestDto requestDto) {
+    public PersonResponse update(UUID id, PersonRequestDto requestDto) {
         Objects.requireNonNull(id, "Person ID is required");
         log.info("Updating person with ID: {}", id);
 
@@ -135,7 +212,7 @@ public class PersonServiceImpl implements IPersonService {
     }
 
     @Override
-    public PersonResponseDto deactivate(UUID id) {
+    public PersonResponse deactivate(UUID id) {
 
         Objects.requireNonNull(id, "Person ID is required");
         log.info("Deactivating person with ID: {}", id);
@@ -165,7 +242,7 @@ public class PersonServiceImpl implements IPersonService {
     }
 
     @Override
-    public PersonResponseDto activate(UUID id) {
+    public PersonResponse activate(UUID id) {
         Objects.requireNonNull(id, "Person ID is required");
 
         log.info("Activating person with ID: {}", id);
@@ -194,7 +271,7 @@ public class PersonServiceImpl implements IPersonService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PersonResponseDto> searchByName(String name, Pageable pageable) {
+    public Page<PersonResponse> searchByName(String name, Pageable pageable) {
         // Validate input (optional but recommended)
         if (Objects.isNull(name) || name.trim().isEmpty()) {
             log.warn("Search requested with null or empty name - returning empty page");
@@ -229,7 +306,7 @@ public class PersonServiceImpl implements IPersonService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PersonResponseDto> getAllActive(Pageable pageable) {
+    public Page<PersonResponse> getAllActive(Pageable pageable) {
         // INFO: Start of a read operation that lists active records
         log.info("Fetching all active persons (page: {}, size: {}, sort: {})",
                 pageable.getPageNumber(),
@@ -258,7 +335,7 @@ public class PersonServiceImpl implements IPersonService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PersonResponseDto> getAll(Pageable pageable) {
+    public Page<PersonResponse> getAll(Pageable pageable) {
         // INFO: Start of a full list operation (potentially large result set)
         log.info("Fetching all persons (including inactive) - page: {}, size: {}, sort: {}",
                 pageable.getPageNumber(),

@@ -2,36 +2,35 @@ package com.starone.bookshow.movie.service.impl;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.starone.bookshow.movie.client.PersonClient;
+import com.starone.bookshow.movie.client.IPersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
-import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieCreditService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.MovieCreditResponseDto;
-import com.starone.common.dto.PersonResponseDto;
 import com.starone.common.enums.Profession;
-import com.starone.common.enums.Status;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.MovieCreditResponse;
 
-import feign.FeignException;
+import io.jsonwebtoken.lang.Collections;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -43,128 +42,19 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
         private final IMovieCreditRepository movieCreditRepository;
         private final IMovieRepository movieRepository;
         private final IMovieCreditMapper movieCreditMapper;
-        private final PersonClient personClient;
-
-        @Override
-        public MovieCreditResponseDto addCredit(UUID movieId, MovieCreditRequestDto requestDto) {
-                Objects.requireNonNull(movieId, "Movie Id is required");
-
-                log.info("Adding credit for movie ID: {} - Person ID: {}, Role: {}",
-                                movieId, requestDto.getPersonId(), requestDto.getProfessions());
-
-                // Fetch movie
-                Movie movie = movieRepository.findById(movieId)
-                                .orElseThrow(() -> {
-                                        log.warn("Movie not found when adding credit - Movie ID: {}", movieId);
-                                        return new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND);
-                                });
-                // Check for duplicate credit (same person + same role in same movie)
-                if (movieCreditRepository.existsByMovieIdAndPersonIdAndMovieCharacters(
-                                movieId, requestDto.getPersonId(), requestDto.getProfessions())) {
-                        log.warn("Duplicate credit detected - Person ID: {} already has role '{}' in Movie ID: {}",
-                                        requestDto.getPersonId(), requestDto.getProfessions(), movieId);
-                        throw new ConflictException(ErrorCodes.MOVIE_CREDIT_ALREADY_EXISTS,
-                                        "This person already has this role in the movie");
-                }
-
-                log.debug("Validating person existence via person-service - Person ID: {}", requestDto.getPersonId());
-                personClient.getPersonById(requestDto.getPersonId()); // validate person exists
-
-                // Map and persist
-                MovieCredit credit = movieCreditMapper.toEntity(requestDto); // ← BaseMapper method
-                credit.setMovie(movie); // manually set parent
-
-                // INFO: Successful creation
-                credit = movieCreditRepository.save(credit);
-
-                log.info("Credit added successfully - Credit ID: {}, Movie ID: {}, Person ID: {}, Role: {}",
-                                credit.getId(), movieId, requestDto.getPersonId(), requestDto.getProfessions());
-
-                return enrichAndMapResponse(credit);
-        }
-
-        @Override
-        public MovieCreditResponseDto updateCredit(UUID creditId, MovieCreditRequestDto requestDto) {
-                Objects.requireNonNull(creditId, "Credit Id is required.");
-                log.info("Updating movie credit with ID: {}", creditId);
-
-                MovieCredit credit = movieCreditRepository.findById(creditId)
-                                .orElseThrow(() -> {
-                                        log.warn("Credit not found for update - Credit ID: {}", creditId);
-                                        return new NotFoundException(
-                                                        ErrorCodes.MOVIE_CREDIT_NOT_FOUND, "Credit not found");
-                                });
-
-                UUID movieId = credit.getMovie().getId();
-                UUID oldPersonId = credit.getPersonId();
-                Set<Profession> oldProfessions = credit.getProfessions();
-
-                // Duplicate check if role or person changing
-                if (requestDto.getProfessions() != null && requestDto.getPersonId() != null &&
-                                (!requestDto.getProfessions().equals(oldProfessions) ||
-                                                !requestDto.getPersonId().equals(oldPersonId))) {
-
-                        if (movieCreditRepository.existsByMovieIdAndPersonIdAndMovieCharacters(
-                                        movieId, requestDto.getPersonId(), requestDto.getProfessions())) {
-                                // WARN: Business rule violation on update
-                                log.warn(
-                                                "Duplicate credit detected during update - Person ID: {} with role '{}' already exists in Movie ID: {}",
-                                                requestDto.getPersonId(), requestDto.getProfessions(), movieId);
-                                throw new ConflictException(ErrorCodes.MOVIE_CREDIT_ALREADY_EXISTS,
-                                                "Duplicate role for this person in movie");
-                        }
-                        // INFO: Significant change in credit assignment
-                        log.info(
-                                        "Changing credit assignment - Movie ID: {}, Old: (Person: {}, Role: {}), New: (Person: {}, Role: {})",
-                                        movieId, oldPersonId, oldProfessions, requestDto.getPersonId(),
-                                        requestDto.getProfessions());
-                }
-
-                // Validate new person exists if personId is being changed
-                if (requestDto.getPersonId() != null && !requestDto.getPersonId().equals(oldPersonId)) {
-                        log.debug("Validating new person existence via person-service - Person ID: {}",
-                                        requestDto.getPersonId());
-                        personClient.getPersonById(requestDto.getPersonId()); // throws if not found
-                }
-
-                // Apply partial updates
-                movieCreditMapper.updateEntity(requestDto, credit);
-
-                credit = movieCreditRepository.save(credit);
-
-                // INFO: Successful update — key audit event
-                log.info("Movie credit updated successfully - Credit ID: {}, Movie ID: {}, Person ID: {}, Role: {}",
-                                credit.getId(), movieId, credit.getPersonId(), credit.getProfessions());
-
-                return enrichAndMapResponse(credit);
-        }
-
-        @Override
-        public void removeCredit(UUID creditId) {
-                // INFO: Start of a destructive operation — critical for audit
-                log.info("Removing movie credit with ID: {}", creditId);
-
-                // Check existence before delete
-                if (!movieCreditRepository.existsById(creditId)) {
-                        // WARN: Client tried to delete non-existent credit
-                        log.warn("Cannot remove credit - not found with ID: {}", creditId);
-                        throw new NotFoundException(ErrorCodes.MOVIE_CREDIT_NOT_FOUND, "Credit not found");
-                }
-
-                // Perform deletion
-                movieCreditRepository.deleteById(creditId);
-
-                // INFO: Successful removal — essential audit event (who/when/what was deleted)
-                log.info("Movie credit removed successfully - Credit ID: {}", creditId);
-        }
+        private final IPersonClient personClient;
 
         @Override
         @Transactional(readOnly = true)
-        public List<MovieCreditResponseDto> getCreditsByMovieId(UUID movieId) {
+        public List<MovieCreditResponse> getCreditsByMovieId(UUID movieId) {
+                if (movieId == null) {
+                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "movie ID null");
+                }
                 // INFO: Start of a read operation that retrieves all credits for a movie
                 log.info("Fetching all credits for movie ID: {}", movieId);
 
                 List<MovieCredit> credits = movieCreditRepository.findByMovieId(movieId);
+
                 // INFO: Result summary — very useful for monitoring API usage and data volume
                 log.info("Retrieved {} credits for movie ID: {}", credits.size(), movieId);
 
@@ -181,11 +71,10 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 }
 
                 // Sort by billingOrder (nulls last), then enrich and map
-                List<MovieCreditResponseDto> response = credits.stream()
+                List<MovieCreditResponse> response = buildEnrichedCreditResponses(credits).stream()
                                 .sorted(Comparator
-                                                .comparingInt(c -> c.getBillingOrder() == null ? Integer.MAX_VALUE
-                                                                : c.getBillingOrder()))
-                                .map(this::enrichAndMapResponse)
+                                                .comparingInt(c -> c.billingOrder() == null ? Integer.MAX_VALUE
+                                                                : c.billingOrder()))
                                 .toList();
 
                 // INFO: Final result count after processing
@@ -196,7 +85,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
 
         @Override
         @Transactional(readOnly = true)
-        public Page<MovieCreditResponseDto> getCreditsByMovieIdPaginated(UUID movieId, Pageable pageable) {
+        public Page<MovieCreditResponse> getCreditsByMovieIdPaginated(UUID movieId, Pageable pageable) {
                 // INFO: Start of paginated read operation
                 log.info("Fetching paginated credits for movie ID: {} (page: {}, size: {}, sort: {})",
                                 movieId,
@@ -226,11 +115,10 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                                         .toList();
                         log.debug("Raw credits on this page (sample): {}", sample);
                 }
+                List<MovieCreditResponse> enriched = buildEnrichedCreditResponses(page.getContent());
 
-                // Map and enrich
-                Page<MovieCreditResponseDto> responsePage = page.map(this::enrichAndMapResponse);
+                Page<MovieCreditResponse> responsePage = new PageImpl<>(enriched, pageable, page.getTotalElements());
 
-                // INFO: Final result after enrichment
                 log.info("Returning {} enriched credits for movie ID: {} (page: {} of {}, total: {})",
                                 responsePage.getNumberOfElements(),
                                 movieId,
@@ -243,7 +131,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
 
         @Override
         @Transactional(readOnly = true)
-        public MovieCreditResponseDto getCreditById(UUID creditId) {
+        public MovieCreditResponse getCreditById(UUID creditId) {
                 // INFO: Start of a single-record read operation
                 log.info("Fetching movie credit by ID: {}", creditId);
 
@@ -273,11 +161,12 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
         }
 
         @Override
-        public List<MovieCreditResponseDto> reorderCredits(UUID movieId, List<MovieCreditRequestDto> orderedDtos) {
+        @Transactional
+        public List<MovieCreditResponse> reorderCredits(UUID movieId, List<MovieCreditRequestDto> orderedDtos) {
                 // Validate input early
                 if (orderedDtos == null || orderedDtos.isEmpty()) {
                         log.warn("Reorder credits requested with null or empty list for movie ID: {}", movieId);
-                        throw new BadRequestException(ErrorCodes.VALIDATION_ERROR, "Reorder list cannot be empty");
+                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "Reorder list cannot be empty");
                 }
 
                 // INFO: Start of a critical ordering operation — highly auditable
@@ -300,7 +189,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 if (orderedDtos.size() != credits.size()) {
                         log.warn("Reorder list size mismatch for movie ID: {} - expected {}, got {}",
                                         movieId, credits.size(), orderedDtos.size());
-                        throw new BadRequestException(ErrorCodes.VALIDATION_ERROR,
+                        throw new BadRequestException(ErrorCodes.VALIDATION_400,
                                         "Reorder list must contain all existing credits with the same size");
                 }
 
@@ -314,7 +203,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                                         .orElseThrow(() -> {
                                                 log.warn("Invalid credit in reorder list for movie ID: {} - Person ID: {}, Role: {}",
                                                                 movieId, dto.getPersonId(), dto.getProfessions());
-                                                return new BadRequestException(ErrorCodes.VALIDATION_ERROR,
+                                                return new BadRequestException(ErrorCodes.VALIDATION_400,
                                                                 "Invalid credit in reorder list: no matching person and role");
                                         });
 
@@ -341,82 +230,91 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
         }
 
         @Override
-        public boolean existsCredit(UUID movieId, UUID personId, Set<Profession> roles) {
+        public boolean existsCredit(UUID movieId, UUID personId, Set<Profession> professions) {
                 // Basic input validation
-                if (movieId == null || personId == null || roles == null) {
+                if (movieId == null || personId == null || professions == null) {
                         log.warn("existsCredit called with null parameter - Movie ID: {}, Person ID: {}, Role: {}",
-                                        movieId, personId, roles);
+                                        movieId, personId, professions);
                         return false;
                 }
 
                 // DEBUG: Log the uniqueness check (very useful when debugging conflicts)
                 log.debug("Checking if credit exists - Movie ID: {}, Person ID: {}, Role: {}",
-                                movieId, personId, roles);
+                                movieId, personId, professions);
 
                 boolean exists = movieCreditRepository.existsByMovieIdAndPersonIdAndMovieCharacters(movieId, personId,
-                                roles);
+                                professions);
 
                 // DEBUG: Result of the check
                 log.debug("Credit existence check result - Movie ID: {}, Person ID: {}, Role: {} → {}",
-                                movieId, personId, roles, exists);
+                                movieId, personId, professions, exists);
 
                 return exists;
         }
 
         // Helper: enrich basic mapped DTO with person details
-        private MovieCreditResponseDto enrichAndMapResponse(MovieCredit credit) {
+        private MovieCreditResponse enrichAndMapResponse(MovieCredit credit) {
                 // DEBUG: Start of enrichment (external call)
                 log.debug("Enriching movie credit - Credit ID: {}, Person ID: {}",
                                 credit.getId(), credit.getPersonId());
-
-                MovieCreditResponseDto creditDto = movieCreditMapper.toResponseDto(credit);
-
-                try {
-                        ApiResponse<PersonResponseDto> personResponse = personClient
-                                        .getPersonById(credit.getPersonId());
-
-                        if (personResponse.getStatus() == Status.SUCCESS && personResponse.getData() != null) {
-                                PersonResponseDto person = personResponse.getData();
-
-                                creditDto.setPersonName(person.getName());
-                                creditDto.setNickName(person.getNickName());
-                                creditDto.setProfileImg(person.getProfileImg());
-
-                                // DEBUG: Success
-                                log.debug("Successfully enriched credit - Credit ID: {}, Person Name: {}",
-                                                credit.getId(), person.getName());
-                        } else {
-                                // Business-level error (e.g., person not found, validation failed, etc.)
-                                String reason = personResponse.getMessage() != null
-                                                ? personResponse.getMessage()
-                                                : "Unknown Reason";
-
-                                log.debug("Person not available for ID: {} | ErrorCode: {}, Message: {}",
-                                                credit.getPersonId(),
-                                                personResponse.getErrorCode(),
-                                                reason);
-                                creditDto.setPersonName("Unknown Person");
-                                creditDto.setProfileImg(null);
-                        }
-
-                } catch (FeignException e) {
-                        // Only reaches here on network-level issues:
-                        // - Connection refused
-                        // - Timeout
-                        // - DNS failure
-                        // - Person service down
-                        log.warn("Failed to reach Person service for ID: {} | Status: {} | Message: {}",
-                                        credit.getPersonId(), e.status(), e.getMessage());
-
-                        creditDto.setPersonName("Unavailable");
-                        creditDto.setProfileImg(null);
-
+                MovieCreditPersonResponse movieCredit = personClient.getPersonById(credit.getPersonId());
+                if (movieCredit == null) {
+                        log.warn("Person is null");
+                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "Please, provide valid person");
                 }
-                // Always set fields from MovieCredit (even if person failed)
-                creditDto.setProfessions(credit.getProfessions());
-                creditDto.setCharacterNames(credit.getMovieCharacters());
-                creditDto.setBillingOrder(credit.getBillingOrder());
+                return new MovieCreditResponse(
+                                credit.getId(),
+                                credit.getPersonId(),
+                                movieCredit.name(),
+                                movieCredit.profileImg(),
+                                credit.getProfessions(),
+                                credit.getMovieCharacters(),
+                                credit.getBillingOrder());
 
-                return creditDto;
         }
+
+        private List<MovieCreditResponse> buildEnrichedCreditResponses(List<MovieCredit> credits) {
+                if (credits == null || credits.isEmpty()) {
+                        log.warn("Credits are Empty or null");
+                        return Collections.emptyList();
+                }
+                Set<UUID> personIds = credits.stream()
+                                .map(MovieCredit::getPersonId)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toSet());
+
+                log.debug("Extracted person ids :{}", personIds.size());
+
+                // Get persdon details from person service
+
+                List<MovieCreditPersonResponse> persons = personClient.getAllPersonByIds(personIds);
+
+                if (persons.size() != personIds.size()) {
+                        log.warn("Person list size mismatch - expected {}, got {}",
+                                        credits.size(), persons.size());
+                        throw new BadRequestException(ErrorCodes.VALIDATION_400,
+                                        "Person list must contain all existing credits with the same size");
+                }
+                Map<UUID, MovieCreditPersonResponse> personMap = persons.stream()
+                                .collect(Collectors.toMap(
+                                                MovieCreditPersonResponse::id,
+                                                p -> p));
+
+                return credits.stream().map(credit -> {
+                        MovieCreditPersonResponse person = personMap.get(credit.getPersonId());
+                        String name = person != null ? person.name() : null;
+                        String profileImg = person != null ? person.profileImg() : null;
+
+                        return new MovieCreditResponse(
+                                        credit.getId(),
+                                        credit.getPersonId(),
+                                        name,
+                                        profileImg,
+                                        credit.getProfessions(),
+                                        credit.getMovieCharacters(),
+                                        credit.getBillingOrder());
+                }).toList();
+
+        }
+
 }

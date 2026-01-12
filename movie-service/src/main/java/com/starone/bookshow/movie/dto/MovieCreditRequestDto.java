@@ -15,8 +15,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MovieCreditRequestDto {
+    
     private UUID personId;
     private Set<Profession> professions;
-    private Set<String> characterNames;
+    private Set<String> movieCharacters;
     private Integer billingOrder;
 }

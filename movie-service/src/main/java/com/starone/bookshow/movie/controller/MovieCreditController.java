@@ -20,8 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.service.IMovieCreditService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.MovieCreditResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.MovieCreditResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,51 +33,25 @@ import lombok.RequiredArgsConstructor;
 public class MovieCreditController {
     private final IMovieCreditService movieCreditService;
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<MovieCreditResponseDto> addCredit(
-            @PathVariable("movieId") UUID movieId,
-            @Valid @RequestBody MovieCreditRequestDto requestDto) {
-        MovieCreditResponseDto response = movieCreditService.addCredit(movieId, requestDto);
-        return ApiResponse.success(response);
-    }
-
-    @PatchMapping("/{creditId}")
-    public ApiResponse<MovieCreditResponseDto> updateCredit(
-            @PathVariable("movieId") UUID movieId,
-            @PathVariable("creditId") UUID creditId,
-            @Valid @RequestBody MovieCreditRequestDto requestDto) {
-        // Note: movieId in path for security (ensure credit belongs to movie)
-        MovieCreditResponseDto response = movieCreditService.updateCredit(creditId, requestDto);
-        return ApiResponse.success(response);
-    }
-
-    @DeleteMapping("/{creditId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> removeCredit(@PathVariable("creditId") UUID creditId) {
-        movieCreditService.removeCredit(creditId);
-        return ApiResponse.success(null);
-    }
-
     @GetMapping
-    public ApiResponse<List<MovieCreditResponseDto>> getCredits(@PathVariable("movieId") UUID movieId) {
-        List<MovieCreditResponseDto> credits = movieCreditService.getCreditsByMovieId(movieId);
-        return ApiResponse.success(credits);
+    public ApiResponse<List<MovieCreditResponse>> getCredits(@PathVariable("movieId") UUID movieId) {
+        List<MovieCreditResponse> credits = movieCreditService.getCreditsByMovieId(movieId);
+        return ApiResponses.success(credits);
     }
 
     @GetMapping("/paginated")
-    public ApiResponse<Page<MovieCreditResponseDto>> getCreditsPaginated(
+    public ApiResponse<Page<MovieCreditResponse>> getCreditsPaginated(
             @PathVariable("movieId") UUID movieId,
             @PageableDefault(size = 50, sort = "billingOrder") Pageable pageable) {
-        Page<MovieCreditResponseDto> page = movieCreditService.getCreditsByMovieIdPaginated(movieId, pageable);
-        return ApiResponse.success(page);
+        Page<MovieCreditResponse> page = movieCreditService.getCreditsByMovieIdPaginated(movieId, pageable);
+        return ApiResponses.success(page);
     }
 
     @PutMapping("/reorder")
-    public ApiResponse<List<MovieCreditResponseDto>> reorderCredits(
+    public ApiResponse<List<MovieCreditResponse>> reorderCredits(
             @PathVariable("movieId") UUID movieId,
             @Valid @RequestBody List<MovieCreditRequestDto> orderedCredits) {
-        List<MovieCreditResponseDto> reordered = movieCreditService.reorderCredits(movieId, orderedCredits);
-        return ApiResponse.success(reordered);
+        List<MovieCreditResponse> reordered = movieCreditService.reorderCredits(movieId, orderedCredits);
+        return ApiResponses.success(reordered);
     }
 }

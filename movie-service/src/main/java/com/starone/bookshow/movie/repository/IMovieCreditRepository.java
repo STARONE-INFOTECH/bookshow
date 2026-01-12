@@ -13,21 +13,21 @@ import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.common.enums.Profession;
 
 public interface IMovieCreditRepository extends JpaRepository<MovieCredit, UUID> {
-    // Find all credits for a specific movie (most used)
+
     List<MovieCredit> findByMovieId(UUID movieId);
 
     // Paginated version
     Page<MovieCredit> findByMovieId(UUID movieId, Pageable pageable);
 
     // Find all credits for a specific person (for filmography)
-    List<MovieCredit> findByPersonId(UUID personId);
-
-    // Check duplicate role for same person in same movie
-    boolean existsByMovieIdAndPersonIdAndMovieCharacters(UUID movieId, UUID personId, Set<Profession> roleInMovie);
+    Page<MovieCredit> findByPersonId(UUID personId, Pageable pageable);
 
     // Find specific credit for validation/update
-    Optional<MovieCredit> findByMovieIdAndPersonIdAndMovieCharacters(UUID movieId, UUID personId, Set<Profession> roleInMovie);
+    Optional<MovieCredit> findByMovieIdAndPersonId(UUID movieId, UUID personId);
 
     // Optional: find by credit ID and movie ID for security
     Optional<MovieCredit> findByIdAndMovieId(UUID creditId, UUID movieId);
+
+    // Optional: check credit available by movie ID , personId, and charatcters
+    boolean existsByMovieIdAndPersonIdAndMovieCharacters(UUID movieId, UUID personId, Set<Profession> professions);
 }
