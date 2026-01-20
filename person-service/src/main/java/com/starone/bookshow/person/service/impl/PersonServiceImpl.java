@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,7 +28,7 @@ import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;
 import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionSync;
+import com.starone.common.response.record.PersonProfessionAddition;
 import com.starone.common.response.record.PersonResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -110,20 +111,21 @@ public class PersonServiceImpl implements IPersonService {
     }
 
     @Override
-    public void addProfessionsBulk(List<PersonProfessionSync> bulkUpdates) {
+    public void addProfessionsToPersons(List<PersonProfessionAddition> bulkUpdates) {
         if (bulkUpdates == null || bulkUpdates.isEmpty()) {
             throw new BadRequestException(ErrorCodes.BAD_REQUEST,
-                    "PersonProfessionBulkUpdateDto must not be null or invalid");
+                    "Person profession(s) must not be null or empty");
         }
-        // ONE DB call — fetches all persons
+
+        // ONE DB call — set all persons Id
         Set<UUID> personIds = bulkUpdates.stream()
-                .map(PersonProfessionSync::personId)
+                .map(PersonProfessionAddition::personId)
                 .collect(Collectors.toSet());
 
         // ONE DB call — fetches all persons
         Map<UUID, Person> personMap = personRepository.findAllById(personIds)
                 .stream()
-                .collect(Collectors.toMap(Person::getId, p -> p));
+                .collect(Collectors.toMap(Person::getId, person -> person));
 
         // Check missing persons early
         Set<UUID> missingIds = personIds.stream()
@@ -135,7 +137,7 @@ public class PersonServiceImpl implements IPersonService {
         }
 
         // Apply updates
-        for (PersonProfessionSync update : bulkUpdates) {
+        for (PersonProfessionAddition update : bulkUpdates) {
             Person person = personMap.get(update.personId());
             Set<Profession> toAdd = update.professions();
             if (toAdd != null && !toAdd.isEmpty()) {

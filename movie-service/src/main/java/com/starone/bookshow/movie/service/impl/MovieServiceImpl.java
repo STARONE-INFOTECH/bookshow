@@ -2,12 +2,14 @@ package com.starone.bookshow.movie.service.impl;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -25,7 +27,6 @@ import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
 import com.starone.bookshow.movie.repository.IMovieRepository;
-import com.starone.bookshow.movie.service.IMovieCreditService;
 import com.starone.bookshow.movie.service.IMovieService;
 import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
@@ -34,8 +35,9 @@ import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.NotFoundException;
 import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.MovieCreditResponse;
 import com.starone.common.response.record.MovieResponse;
-import com.starone.common.response.record.PersonProfessionSync;
+import com.starone.common.response.record.PersonProfessionAddition;
 
 import lombok.RequiredArgsConstructor;
 
@@ -49,50 +51,29 @@ public class MovieServiceImpl implements IMovieService {
     private final IMovieMapper movieMapper;
     private final IMovieCreditMapper creditMapper;
     private final IPersonClient personClient;
-    private final IMovieCreditService movieCreditService; // for enrichment
 
     @Override
     public MovieResponse create(MovieRequestDto requestDto) {
-        if (requestDto == null) {
-            throw new BadRequestException(
-                    ErrorCodes.BAD_REQUEST,
-                    "Movie requestDto is null");
-        }
+
+        validateMovieRequest(requestDto);
+
         // Normalize credits to empty list if null (allow empty credits)
-        List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
-                .orElse(Collections.emptyList());
+        List<MovieCreditRequestDto> credits = normalizeCredits(requestDto);
 
-        // Extract person IDs (safe even if credits is empty)
-        Set<UUID> personIds = credits.stream()
-                .map(MovieCreditRequestDto::getPersonId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        
-        Movie movie = movieMapper.toEntity(requestDto);
-
-        // Add credits if any
-        credits.forEach(creditRequest -> {
-            MovieCredit credit = creditMapper.toEntity(creditRequest);
-            movie.addMovieCredit(credit);
-        });
+        Movie movie = buildMovie(requestDto, credits);
 
         Movie savedMovie = movieRepository.save(movie);
-        log.debug("Movie saved: {} [corr={}]", savedMovie.getId(), null);
-        
-        List<PersonProfessionSync> syncProfessions = syncProfessions(personIds, credits);
-        if (!syncProfessions.isEmpty()) {
-            try {
-                personClient.addProfessionsBulk(syncProfessions);
-                log.info("Synced {} professions [corr={}]", syncProfessions.size(), null);
-            } catch (Exception e) {
-                log.error("Failed to sync professions for movie {} [corr={}]", savedMovie.getId(), null, e);
-                throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Failed to sync professions for movie");
-            }
+        log.debug("Movie saved: {}", savedMovie.getId());
 
-        }
+        List<MovieCreditPersonResponse> persons = credits.isEmpty()
+                ? List.of()
+                : getPersonResponseWithNewProfessions(credits);
 
-        return movieMapper.toResponseDto(savedMovie);
-       
+        syncProfessions(persons);
+
+        List<MovieCreditResponse> creditResponses = buildCreditResponses(credits, persons, savedMovie);
+
+        return buildMovieResponse(savedMovie, creditResponses);
     }
 
     @Override
@@ -227,47 +208,198 @@ public class MovieServiceImpl implements IMovieService {
 
     /*
      * =====================================================================
-     * --- Helper to enrich with credits (reuse from getById logic)----
+     * ------ Helper to enrich with credits (reuse from getById logic)------
      * =====================================================================
      */
-    private List<PersonProfessionSync> syncProfessions(Set<UUID> personIds, List<MovieCreditRequestDto> credits) {
-        // existing persons from person service
-        List<MovieCreditPersonResponse> persons = personClient.getAllPersonByIds(personIds);
-        if (persons.size() != personIds.size()) {
-            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Missing persons ");
+    private void validateMovieRequest(MovieRequestDto requestDto) {
+        if (requestDto == null) {
+            throw new BadRequestException(
+                    ErrorCodes.BAD_REQUEST,
+                    "Movie requestDto is null");
+        }
+        List<MovieCreditRequestDto> credits = requestDto.getMovieCredits();
+        if (credits == null || credits.isEmpty()) {
+            return;
+        }
+        Set<UUID> personIds = new HashSet<>();
+        for (MovieCreditRequestDto credit : credits) {
+            UUID personId = credit.getPersonId();
+            if (personId == null) {
+                throw new BadRequestException(
+                        ErrorCodes.BAD_REQUEST,
+                        "PersonId cannot be null in movie credits");
+            }
+            if (!personIds.add(personId)) {
+                throw new BadRequestException(
+                        ErrorCodes.BAD_REQUEST,
+                        "Same person cannot be added multiple times as movie credit");
+            }
         }
 
-        // map of existing professions
-        Map<UUID, Set<Profession>> existingProfessionMap = persons.stream()
+    }
+
+    // Normalize credits to empty list if null (allow empty credits)
+    private List<MovieCreditRequestDto> normalizeCredits(MovieRequestDto requestDto) {
+        return Optional.ofNullable(requestDto.getMovieCredits())
+                .orElse(Collections.emptyList());
+    }
+
+    private Movie buildMovie(MovieRequestDto requestDto, List<MovieCreditRequestDto> credits) {
+        Movie movie = movieMapper.toEntity(requestDto);
+        credits.forEach(creditRequest -> {
+            MovieCredit credit = creditMapper.toEntity(creditRequest);
+            movie.addMovieCredit(credit); // owning side set here
+        });
+        return movie;
+    }
+
+    private void syncProfessions(List<MovieCreditPersonResponse> persons) {
+        List<PersonProfessionAddition> newProfessions = persons.stream()
+                .filter(p -> !p.professions().isEmpty())
+                .map(person -> new PersonProfessionAddition(
+                        person.id(),
+                        person.professions()))
+                .toList();
+        if (newProfessions.isEmpty()) {
+            return;
+        }
+
+        try {
+            personClient.addProfessionsToPersons(newProfessions);
+            log.info("Synced {} professions for movie",
+                    newProfessions.size());
+        } catch (Exception e) {
+            log.error("Failed to sync professions for movie :", e);
+            throw new BadRequestException(
+                    ErrorCodes.BAD_REQUEST,
+                    "Failed to sync professions for movie");
+        }
+    }
+
+    private List<MovieCreditResponse> buildCreditResponses(
+            List<MovieCreditRequestDto> credits,
+            List<MovieCreditPersonResponse> persons,
+            Movie savedMovie) {
+
+        if (credits.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, MovieCreditPersonResponse> personsById = persons.stream()
                 .collect(Collectors.toMap(
                         MovieCreditPersonResponse::id,
-                        p -> Set.copyOf(p.professions())));
+                        Function.identity()));
+
+        Map<UUID, MovieCredit> creditByPersonId = savedMovie.getMovieCredits().stream()
+                .collect(Collectors.toMap(
+                        MovieCredit::getPersonId,
+                        Function.identity(),
+                        (a, b) -> a // safeguard for duplicates
+                ));
+
+        return credits.stream()
+                .map(creditReq -> {
+
+                    UUID personId = creditReq.getPersonId();
+
+                    MovieCreditPersonResponse person = personsById.get(personId);
+                    if (person == null) {
+                        throw new NotFoundException(
+                                ErrorCodes.PERSON_NOT_FOUND,
+                                "Person not found: " + personId);
+                    }
+
+                    MovieCredit savedCredit = creditByPersonId.get(personId);
+                    if (savedCredit == null) {
+                        throw new IllegalStateException(
+                                "MovieCredit not found for personId: " + personId);
+                    }
+
+                    return new MovieCreditResponse(
+                            savedCredit.getId(), 
+                            personId,
+                            person.name(),
+                            person.profileImg(),
+                            creditReq.getProfessions(),
+                            creditReq.getMovieCharacters(),
+                            savedCredit.getBillingOrder());
+                })
+                .toList();
+    }
+
+    private MovieResponse buildMovieResponse(Movie savedMovie,
+            List<MovieCreditResponse> creditResponses) {
+
+        MovieResponse base = movieMapper.toResponseDto(savedMovie);
+
+        return new MovieResponse(
+                base.id(),
+                base.title(),
+                base.originalTitle(),
+                base.synopsis(),
+                base.languages(),
+                base.genres(),
+                creditResponses,
+                base.durationMinutes(),
+                base.rating(),
+                base.releaseDate(),
+                base.posterUrl(),
+                base.trailerUrl(),
+                base.active());
+    }
+
+    private List<MovieCreditPersonResponse> getPersonResponseWithNewProfessions(List<MovieCreditRequestDto> credits) {
+        // Extract person IDs
+        Set<UUID> personIds = credits.stream()
+                .map(MovieCreditRequestDto::getPersonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // existing persons from person service
+        List<MovieCreditPersonResponse> persons = personClient.getAllPersonByIds(personIds);
+
+        Set<UUID> foundIds = persons.stream()
+                .map(MovieCreditPersonResponse::id)
+                .collect(Collectors.toSet());
+
+        Set<UUID> missingIds = new HashSet<>(personIds);
+        missingIds.removeAll(foundIds);
+
+        if (!missingIds.isEmpty()) {
+            throw new NotFoundException(
+                    ErrorCodes.PERSON_NOT_FOUND,
+                    "Missing persons ");
+        }
 
         // map of requested professions
-        Map<UUID, Set<Profession>> requestedProfessionMap = credits.stream()
+        Map<UUID, Set<Profession>> requestedPersonProfessionsMap = credits.stream()
                 .collect(Collectors.toMap(
                         MovieCreditRequestDto::getPersonId,
-                        MovieCreditRequestDto::getProfessions));
+                        dto -> new HashSet<>(dto.getProfessions()),
+                        (a, b) -> {
+                            a.addAll(b);
+                            return a;
+                        }));
 
-        return requestedProfessionMap.entrySet().stream()
-                .map(entry -> {
-                    UUID personId = entry.getKey();
-                    Set<Profession> requested = entry.getValue(); // new profession
-
-                    Set<Profession> existing = existingProfessionMap
-                            .getOrDefault(personId, Set.of());
+        return persons.stream()
+                .map(person -> {
+                    UUID personId = person.id();
+                    Set<Profession> requested = requestedPersonProfessionsMap.getOrDefault(personId,
+                            Collections.emptySet());
 
                     // Professions that are requested but not already present
-                    Set<Profession> newOnes = requested.stream()
-                            .filter(p -> !existing.contains(p))
-                            .collect(Collectors.toSet());
+                    Set<Profession> newProfessions = requested.stream()
+                            .filter(profession -> !person.professions().contains(profession))
+                            .collect(Collectors.toUnmodifiableSet());
 
-                    return newOnes.isEmpty()
-                            ? null
-                            : new PersonProfessionSync(personId, newOnes);
-                })
-                .filter(Objects::nonNull)
-                .toList();
+                    // set new professions to movie credit response to save in person service
+                    return new MovieCreditPersonResponse(
+                            personId,
+                            person.name(),
+                            person.profileImg(),
+                            newProfessions);
+                }).toList();
+
     }
 
 }

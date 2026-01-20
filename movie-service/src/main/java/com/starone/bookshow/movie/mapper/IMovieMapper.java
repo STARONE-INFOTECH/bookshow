@@ -18,14 +18,16 @@ public interface IMovieMapper extends BaseMapper<Movie, MovieRequestDto, MovieRe
     MovieResponse toResponseDto(Movie movie);
 
     // Create: ignore id and active
+    @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true") // default active on create
-    @Override
+    @Mapping(target = "movieCredits",ignore = true)
     Movie toEntity(MovieRequestDto requestDto);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "active ", ignore = true)
     @Override
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "active", ignore = true)
+    @Mapping(target = "movieCredits",ignore = true)
     void updateEntity(MovieRequestDto requestDto, @MappingTarget Movie entity);
 
 }

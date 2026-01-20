@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionSync;
+import com.starone.common.response.record.PersonProfessionAddition;
 import com.starone.common.response.record.PersonResponse;
 
 public interface IPersonService {
@@ -34,7 +34,7 @@ public interface IPersonService {
     /**
      * add profession(s) by ID(s) (used by movie-service to add new professions
      */
-    void addProfessionsBulk(List<PersonProfessionSync> bulkUpdates);
+    void addProfessionsToPersons(List<PersonProfessionAddition> bulkUpdates);
 
     /**
      * Update person (partial - PATCH)

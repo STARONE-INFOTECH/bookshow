@@ -26,6 +26,7 @@ import com.starone.bookshow.person.service.IPersonService;
 import com.starone.common.request.ApiResponses;
 import com.starone.common.response.record.ApiResponse;
 import com.starone.common.response.record.MovieCreditPersonResponse;
+import com.starone.common.response.record.PersonProfessionAddition;
 import com.starone.common.response.record.PersonResponse;
 
 import jakarta.validation.Valid;
@@ -46,6 +47,14 @@ public class PersonController {
         return ApiResponses.success(response);
     }
 
+    @PostMapping("/professions")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ApiResponse<Void> addProfessionsToPersons(@Valid @RequestBody List<PersonProfessionAddition> bulkUpdateDto) {
+        log.info("Received DTO with :{} no of ids", bulkUpdateDto.size());
+        personService.addProfessionsToPersons(bulkUpdateDto);
+        return ApiResponses.success(null);
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<PersonResponse> getById(@PathVariable("id") UUID id) {
         PersonResponse response = personService.getById(id);
@@ -58,7 +67,7 @@ public class PersonController {
         return ApiResponses.success(existingPerson);
     }
 
-    @GetMapping("/by-ids")
+    @PostMapping("/by-ids")
     public ApiResponse<List<MovieCreditPersonResponse>> getAllByIds(@RequestBody Set<UUID> ids) {
         List<MovieCreditPersonResponse> existingPersons = personService.getAllByIds(ids);
         return ApiResponses.success(existingPersons);
@@ -104,5 +113,29 @@ public class PersonController {
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         Page<PersonResponse> page = personService.getAll(pageable);
         return ApiResponses.success(page);
+    }
+
+    /*
+     * =====================================================================
+     * ------ Internal Service usable endpoints by using Feign client ------
+     * =====================================================================
+     */
+
+    @PostMapping("/internal/professions")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void addProfessionsToPersonsInternal(@Valid @RequestBody List<PersonProfessionAddition> personProfessions) {
+        log.info("Received DTO with :{} no of ids", personProfessions.size());
+        personService.addProfessionsToPersons(personProfessions);
+        log.info("New profession(s) added successfully with :{} no. of person ids", personProfessions.size());
+    }
+
+    @PostMapping("/internal/by-ids")
+    public List<MovieCreditPersonResponse> getAllByIdsInternal(@RequestBody Set<UUID> ids) {
+        return personService.getAllByIds(ids);
+    }
+
+    @GetMapping("/internal/credit-info/{id}")
+    public MovieCreditPersonResponse getPersonByIdInternal(@PathVariable("id") UUID id) {
+        return personService.getPersonById(id);
     }
 }

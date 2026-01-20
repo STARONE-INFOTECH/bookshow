@@ -17,7 +17,7 @@ import com.starone.bookshow.movie.client.IPersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
-import com.starone.bookshow.movie.helper.TestDataFactory;
+import com.starone.bookshow.movie.helper.MovieTestDataFactory;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;
@@ -51,10 +51,8 @@ class MovieCreditServiceTest {
     private MovieCredit savedCredit;
 
     void setUp() {
-        savedMovie = TestDataFactory.createSavedMovie();
-        mappedCredit = TestDataFactory.createMovieCreditFromDto(creditRequestDto);
-        savedCredit = TestDataFactory.createMovieCreditFromDto(creditRequestDto);
-        savedCredit.setId(UUID.randomUUID());
+        
+        //to do..
     }
 
     // ==================== CREATE TESTS ====================

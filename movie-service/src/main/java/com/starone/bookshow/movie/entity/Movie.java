@@ -77,10 +77,8 @@ public class Movie {
     public void addMovieCredit(MovieCredit movieCredit) {
         if (movieCredit == null)
             return;
-        if (!this.movieCredits.contains(movieCredit)) {
-            this.movieCredits.add(movieCredit);
-            movieCredit.setMovie(this);
-        }
+        this.movieCredits.add(movieCredit);
+        movieCredit.setMovie(this);
     }
 
     public void removeMovieCredit(MovieCredit movieCredit) {

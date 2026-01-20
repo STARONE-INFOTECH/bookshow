@@ -17,7 +17,7 @@ public interface IMovieCreditMapper
     // Basic mapping - fields match directly
     @Override
     MovieCreditResponse toResponseDto(MovieCredit entity);
-    
+
     // Ignore fields not in request DTO
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "movie", ignore = true) // set manually in service
@@ -26,5 +26,6 @@ public interface IMovieCreditMapper
 
     // Partial update - ignores nulls automatically
     @Override
-        void updateEntity(MovieCreditRequestDto updateDto, @MappingTarget MovieCredit entity);
+    @Mapping(target = "movie", ignore = true)
+    void updateEntity(MovieCreditRequestDto updateDto, @MappingTarget MovieCredit entity);
 }
