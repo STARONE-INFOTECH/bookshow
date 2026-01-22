@@ -1,6 +1,7 @@
 package com.starone.bookshow.movie.helper;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -17,9 +18,8 @@ import com.starone.common.enums.Rating;
 import com.starone.common.response.record.MovieCreditPersonResponse;
 import com.starone.common.response.record.MovieResponse;
 
-public class MovieTestDataFactory {
-
-    private MovieTestDataFactory() {
+public class MovieCreateTestDataFactory {
+    private MovieCreateTestDataFactory() {
     }
 
     /*
@@ -30,13 +30,14 @@ public class MovieTestDataFactory {
     public static final UUID MOVIE_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     public static final UUID CREDIT_ID_1 = UUID.fromString("22222222-2222-2222-2222-222222222222");
+
     public static final UUID CREDIT_ID_2 = UUID.fromString("33333333-3333-3333-3333-333333333333");
 
     public static final UUID PERSON_ID_1 = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
     public static final UUID PERSON_ID_2 = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     public static final Set<String> MAIN_CHARACTER = Set.of("John Wick");
-
     public static final Set<Profession> ACTOR_ONLY = Set.of(Profession.ACTOR);
 
     public static final Set<Profession> ACTOR_DIRECTOR = Set.of(Profession.ACTOR, Profession.DIRECTOR);
@@ -45,17 +46,17 @@ public class MovieTestDataFactory {
 
     /*
      * =====================================================
-     * ================== MOVIE REQUEST DTO ================
+     * REQUEST STATE (MOVIE CREATE REQUEST DTO's)
      * =====================================================
      */
-    private static MovieRequestDto baseMovieRequestDto(List<MovieCreditRequestDto> credits) {
+    private static MovieRequestDto baseCreateRequest(List<MovieCreditRequestDto> credits) {
         return new MovieRequestDto(
                 "Inception",
                 "Inception",
                 "Dream within a dream",
                 List.of(Language.ENGLISH),
                 List.of(Genre.SCI_FI),
-                credits, // OR null to test normalizeCredits
+                credits,
                 148,
                 Rating.PG_13,
                 LocalDate.of(2010, 7, 16),
@@ -63,184 +64,156 @@ public class MovieTestDataFactory {
                 "trailer.mp4");
     }
 
+    public static MovieRequestDto movieWithNullCredits() {
+        return baseCreateRequest(null);
+    }
+
     public static MovieRequestDto movieWithEmptyCredits() {
-        return baseMovieRequestDto(Collections.emptyList());
+        return baseCreateRequest(Collections.emptyList());
     }
 
     public static MovieRequestDto movieWithOneCredit() {
-        return baseMovieRequestDto(List.of(creditWithSinglePerson()));
+        return baseCreateRequest(List.of(singleCredit()));
     }
 
     public static MovieRequestDto movieWithTwoDiffPersonCredits() {
-        return baseMovieRequestDto(creditWithTwoDifferentPersons());
+        return baseCreateRequest(twoDifferentPersonCredits());
     }
 
     public static MovieRequestDto movieWithDuplicatePersonCredits() {
-        return baseMovieRequestDto(creditWithTwoDuplicatePerson());
+        return baseCreateRequest(List.of(
+                credit(PERSON_ID_1, ACTOR_ONLY, 1),
+                credit(PERSON_ID_1, ACTOR_PRODUCER, 2)));
     }
 
     public static MovieRequestDto movieWithNullPersonCredits() {
-        return baseMovieRequestDto(creditWithsingleNullPerson());
-
-    }
-
-    public static MovieRequestDto movieWithNullCredits() {
-        return baseMovieRequestDto(null);
+        return baseCreateRequest(List.of(
+                new MovieCreditRequestDto(
+                        null,
+                        ACTOR_DIRECTOR,
+                        MAIN_CHARACTER,
+                        1)));
     }
 
     /*
      * =====================================================
-     * =============== MOVIE CREDIT REQUEST DTO ============
+     * CREDIT REQUEST HELPER's)
      * =====================================================
      */
-    private static MovieCreditRequestDto creditRequest(
+    private static MovieCreditRequestDto credit(
             UUID personId,
             Set<Profession> professions,
-            Set<String> characters,
             int billingOrder) {
-
         return new MovieCreditRequestDto(
                 personId,
                 professions,
-                characters,
+                MAIN_CHARACTER,
                 billingOrder);
     }
 
-    private static MovieCreditRequestDto creditWithSinglePerson() {
-        return creditRequest(PERSON_ID_1, ACTOR_DIRECTOR, MAIN_CHARACTER, 1);
+    private static MovieCreditRequestDto singleCredit() {
+        return credit(PERSON_ID_1, ACTOR_DIRECTOR, 1);
     }
 
-    private static List<MovieCreditRequestDto> creditWithTwoDifferentPersons() {
+    private static List<MovieCreditRequestDto> twoDifferentPersonCredits() {
         return List.of(
-                creditRequest(PERSON_ID_1, ACTOR_DIRECTOR, MAIN_CHARACTER, 1),
-                creditRequest(PERSON_ID_2, ACTOR_PRODUCER, MAIN_CHARACTER, 2));
-
-    }
-
-    private static List<MovieCreditRequestDto> creditWithsingleNullPerson() {
-        return List.of(creditRequest(null, ACTOR_DIRECTOR, MAIN_CHARACTER, 1));
-    }
-
-    private static List<MovieCreditRequestDto> creditWithTwoDuplicatePerson() {
-        return List.of(
-                creditRequest(PERSON_ID_1, ACTOR_ONLY, MAIN_CHARACTER, 1),
-                creditRequest(PERSON_ID_1, ACTOR_PRODUCER, MAIN_CHARACTER, 2));
-
+                credit(PERSON_ID_1, ACTOR_DIRECTOR, 1),
+                credit(PERSON_ID_2, ACTOR_PRODUCER, 2));
     }
 
     /*
      * =====================================================
-     * =============== MOVIE AND CREDIT ENTITY =============
+     * SAVED MOVIE ENTITIES (POST CREATE)
      * =====================================================
      */
-    private static Movie baseSavedMovie() {
+    public static Movie savedMovieWithOneCredit() {
         Movie movie = new Movie();
         movie.setId(MOVIE_ID);
-        movie.setMovieCredits(Collections.emptyList());
-        return movie;
-    }
 
-    private static MovieCredit credit(
-            UUID creditId,
-            UUID personId,
-            int billingOrder,
-            Movie movie) {
         MovieCredit credit = new MovieCredit();
-        credit.setId(creditId);
-        credit.setPersonId(personId);
-        credit.setBillingOrder(billingOrder);
+        credit.setId(CREDIT_ID_1);
+        credit.setPersonId(PERSON_ID_1);
+        credit.setBillingOrder(1);
         credit.setMovie(movie);
-        return credit;
 
-    }
-
-    public static Movie savedMovieWithOneCredit() {
-        Movie movie = baseSavedMovie();
-        MovieCredit credit = credit(
-                CREDIT_ID_1, PERSON_ID_1, 1, movie);
-
-        movie.setMovieCredits(List.of(credit));
-        return movie;
-    }
-
-    public static Movie savedMovieWithTwoCreditsSamePerson() {
-        Movie movie = baseSavedMovie();
-
-        MovieCredit credit1 = credit(
-                CREDIT_ID_1, PERSON_ID_1, 1, movie);
-
-        MovieCredit credit2 = credit(
-                CREDIT_ID_2, PERSON_ID_1, 2, movie);
-
-        movie.setMovieCredits(List.of(credit1, credit2));
+        movie.setMovieCredits(new ArrayList<>(List.of(credit)));
         return movie;
     }
 
     public static Movie savedMovieWithTwoCreditsDifferentPerson() {
-        Movie movie = baseSavedMovie();
+        Movie movie = new Movie();
+        movie.setId(MOVIE_ID);
 
-        MovieCredit credit1 = credit(
-                CREDIT_ID_1, PERSON_ID_1, 1, movie);
+        MovieCredit c1 = new MovieCredit();
+        c1.setId(CREDIT_ID_1);
+        c1.setPersonId(PERSON_ID_1);
+        c1.setBillingOrder(1);
+        c1.setMovie(movie);
 
-        MovieCredit credit2 = credit(
-                CREDIT_ID_2, PERSON_ID_2, 2, movie);
+        MovieCredit c2 = new MovieCredit();
+        c2.setId(CREDIT_ID_2);
+        c2.setPersonId(PERSON_ID_2);
+        c2.setBillingOrder(2);
+        c2.setMovie(movie);
 
-        movie.setMovieCredits(List.of(credit1, credit2));
+        movie.setMovieCredits(new ArrayList<>(List.of(c1, c2)));
         return movie;
     }
 
     /*
      * =====================================================
-     * =========== PERSON SERVICE RESPONSES ================
+     * PERSON SERVICE RESPONSES
      * =====================================================
      */
-    // MovieRequest professions : [P1 = ACTOR_ONLY] [p2 = ACTOR_PRODUCER]
+    // Person already has all requested professions
     public static MovieCreditPersonResponse personWithAllRequestedProfessions() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_1,
                 "Leonardo DiCaprio",
                 "leo.jpg",
-                ACTOR_DIRECTOR); // no new profession (Requested) added for this person
+                ACTOR_DIRECTOR);
     }
-    // MovieRequest professions : [P1 = ACTOR_DIRECTOR]
+
+    // Missing DIRECTOR
     public static MovieCreditPersonResponse personMissingRequestedProfessions_1() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_1,
                 "Leonardo DiCaprio",
                 "leo.jpg",
-                ACTOR_ONLY); // new profession (DIRECTOR)  will be added
+                ACTOR_ONLY);
     }
-    // MovieRequest professions : [p2 = ACTOR_PRODUCER]
+
+    // Missing ACTOR + PRODUCER
     public static MovieCreditPersonResponse personMissingRequestedProfessions_2() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_2,
                 "Christopher Nolan",
                 "nolan.jpg",
-                Set.of(Profession.DIRECTOR)); // new profession (ACTOR_PRODUCER) will be added
+                Set.of(Profession.DIRECTOR));
     }
-    // MovieRequest professions : [P1 = ACTOR_DIRECTOR]
+
+    // No new professions needed
     public static MovieCreditPersonResponse personWithRequestedProfessions_1() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_1,
                 "Leonardo DiCaprio",
                 "leo.jpg",
-                ACTOR_DIRECTOR); // no new profession 
+                ACTOR_DIRECTOR);
     }
-    // MovieRequest professions : [p2 = ACTOR_PRODUCER]
+
     public static MovieCreditPersonResponse personWithRequestedProfessions_2() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_2,
                 "Christopher Nolan",
                 "nolan.jpg",
-                ACTOR_PRODUCER); //no new profession 
+                ACTOR_PRODUCER);
     }
 
     /*
      * =====================================================
-     * =================== BASE RESPONSE ===================
+     * BASE RESPONSE
      * =====================================================
      */
-
     public static MovieResponse baseMovieResponse() {
         return new MovieResponse(
                 MOVIE_ID,
@@ -249,7 +222,7 @@ public class MovieTestDataFactory {
                 "Dream within a dream",
                 List.of(Language.ENGLISH),
                 List.of(Genre.SCI_FI),
-                Collections.emptyList(),
+                new ArrayList<>(),
                 148,
                 Rating.PG_13,
                 LocalDate.of(2010, 7, 16),

@@ -1,5 +1,6 @@
 package com.starone.bookshow.movie.entity;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,12 +41,12 @@ public class MovieCredit {
     @CollectionTable(name = "movie_credit_professions",joinColumns = @JoinColumn(name="movie_credit_id"))
     @Column(name = "professions", nullable = false)
     @Enumerated(EnumType.STRING)
-    private Set<Profession> professions; // ACTOR, DIRECTOR, PRODUCER, etc.
+    private Set<Profession> professions = new HashSet<>(); // ACTOR, DIRECTOR, PRODUCER, etc.
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "movie_credit_characters", joinColumns = @JoinColumn(name= "movie_credit_id"))
     @Column(name = "character_name", nullable = true)  // allow null/empty for uncredited
-    private Set<String> movieCharacters; // only for actors/actress
+    private Set<String> movieCharacters = new HashSet<>(); // only for actors/actress
 
     private Integer billingOrder; // very useful for ordering cast
 

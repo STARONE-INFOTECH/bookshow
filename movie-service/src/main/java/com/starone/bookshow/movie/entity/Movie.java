@@ -47,12 +47,12 @@ public class Movie {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "movie_languages", joinColumns = @JoinColumn(name = "movie_id"))
     @Enumerated(EnumType.STRING)
-    private List<Language> languages;
+    private List<Language> languages = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "movie_genres", joinColumns = @JoinColumn(name = "movie_id"))
     @Enumerated(EnumType.STRING)
-    private List<Genre> genres;
+    private List<Genre> genres = new ArrayList<>();
 
     @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MovieCredit> movieCredits = new ArrayList<>();

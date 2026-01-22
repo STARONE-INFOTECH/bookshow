@@ -1,6 +1,7 @@
 package com.starone.bookshow.movie.service.impl;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -57,10 +58,10 @@ public class MovieServiceImpl implements IMovieService {
 
         validateMovieRequest(requestDto);
 
-        // Normalize credits to empty list if null (allow empty credits)
-        List<MovieCreditRequestDto> credits = normalizeCredits(requestDto);
+        Movie movie = mapToMovie(requestDto);
 
-        Movie movie = buildMovie(requestDto, credits);
+        List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
+                .orElse(Collections.emptyList());
 
         Movie savedMovie = movieRepository.save(movie);
         log.debug("Movie saved: {}", savedMovie.getId());
@@ -71,7 +72,8 @@ public class MovieServiceImpl implements IMovieService {
 
         syncProfessions(persons);
 
-        List<MovieCreditResponse> creditResponses = buildCreditResponses(credits, persons, savedMovie);
+        List<MovieCreditResponse> creditResponses = buildCreditResponses(persons,
+                savedMovie);
 
         return buildMovieResponse(savedMovie, creditResponses);
     }
@@ -88,25 +90,53 @@ public class MovieServiceImpl implements IMovieService {
                             "Movie not found with id: " + id);
                 });
 
+        List<MovieCredit> credits = Optional.ofNullable(movie.getMovieCredits())
+                .orElse(Collections.emptyList());
+
+        Set<UUID> personIds = credits.stream().map(MovieCredit::getPersonId)
+                .collect(Collectors.toSet());
+
+        List<MovieCreditPersonResponse> persons = personClient.getAllPersonByIds(personIds);
+
+        List<MovieCreditResponse> creditResponses = buildCreditResponses(persons, movie);
+
         log.info("Movie fetched successfully. id={}", id);
-        return movieMapper.toResponseDto(movie);
+        return buildMovieResponse(movie, creditResponses);
     }
 
     @Override
     public MovieResponse update(UUID id, MovieRequestDto movieRequestDto) {
+        if (id == null) {
+            throw new BadRequestException(
+                    ErrorCodes.BAD_REQUEST,
+                    "Movie Id can not be null");
+        }
 
-        Objects.requireNonNull(id, "Movie Id is required.");
+        validateMovieRequest(movieRequestDto);
+
         Movie existingMovie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(
                         ErrorCodes.MOVIE_NOT_FOUND,
                         "Movie not found with id: " + id));
+
         // mapping MovieDto with existingMovie
         movieMapper.updateEntity(movieRequestDto, existingMovie);
 
         Movie updatedMovie = movieRepository.save(existingMovie);
         log.info("Movie updated successfully. id={}", id);
 
-        return movieMapper.toResponseDto(updatedMovie);
+        List<MovieCreditRequestDto> credits = Optional.ofNullable(movieRequestDto.getMovieCredits())
+                .orElse(Collections.emptyList());
+
+        List<MovieCreditPersonResponse> persons = movieRequestDto.getMovieCredits().isEmpty()
+                ? List.of()
+                : getPersonResponseWithNewProfessions(credits);
+
+        syncProfessions(persons);
+
+        List<MovieCreditResponse> creditResponses = buildCreditResponses(persons, updatedMovie);
+
+        return buildMovieResponse(updatedMovie, creditResponses);
     }
 
     @Override
@@ -217,10 +247,13 @@ public class MovieServiceImpl implements IMovieService {
                     ErrorCodes.BAD_REQUEST,
                     "Movie requestDto is null");
         }
-        List<MovieCreditRequestDto> credits = requestDto.getMovieCredits();
-        if (credits == null || credits.isEmpty()) {
+        List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
+                .orElse(Collections.emptyList());
+
+        if (credits.isEmpty()) {
             return;
         }
+
         Set<UUID> personIds = new HashSet<>();
         for (MovieCreditRequestDto credit : credits) {
             UUID personId = credit.getPersonId();
@@ -238,14 +271,13 @@ public class MovieServiceImpl implements IMovieService {
 
     }
 
-    // Normalize credits to empty list if null (allow empty credits)
-    private List<MovieCreditRequestDto> normalizeCredits(MovieRequestDto requestDto) {
-        return Optional.ofNullable(requestDto.getMovieCredits())
+    // Map movie and normalize credits and empty list if null (allow empty credits)
+    private Movie mapToMovie(MovieRequestDto requestDto) {
+        List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
                 .orElse(Collections.emptyList());
-    }
 
-    private Movie buildMovie(MovieRequestDto requestDto, List<MovieCreditRequestDto> credits) {
         Movie movie = movieMapper.toEntity(requestDto);
+
         credits.forEach(creditRequest -> {
             MovieCredit credit = creditMapper.toEntity(creditRequest);
             movie.addMovieCredit(credit); // owning side set here
@@ -277,13 +309,12 @@ public class MovieServiceImpl implements IMovieService {
     }
 
     private List<MovieCreditResponse> buildCreditResponses(
-            List<MovieCreditRequestDto> credits,
             List<MovieCreditPersonResponse> persons,
             Movie savedMovie) {
 
-        if (credits.isEmpty()) {
-            return List.of();
-        }
+        List<MovieCredit> credits = savedMovie.getMovieCredits() == null
+                ? new ArrayList<>()
+                : savedMovie.getMovieCredits();
 
         Map<UUID, MovieCreditPersonResponse> personsById = persons.stream()
                 .collect(Collectors.toMap(
@@ -316,7 +347,7 @@ public class MovieServiceImpl implements IMovieService {
                     }
 
                     return new MovieCreditResponse(
-                            savedCredit.getId(), 
+                            savedCredit.getId(),
                             personId,
                             person.name(),
                             person.profileImg(),
