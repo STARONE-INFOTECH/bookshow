@@ -143,6 +143,9 @@ public class MovieServiceImpl implements IMovieService {
     public MovieResponse deactivate(UUID id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
+        if(Boolean.FALSE.equals(movie.getActive())){
+            return movieMapper.toResponseDto(movie);
+        }
         movie.setActive(false);
         movie = movieRepository.save(movie);
         return movieMapper.toResponseDto(movie);
@@ -152,6 +155,9 @@ public class MovieServiceImpl implements IMovieService {
     public MovieResponse activate(UUID id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
+        if (Boolean.TRUE.equals(movie.getActive())) {
+            return movieMapper.toResponseDto(movie);
+        }
         movie.setActive(true);
         movie = movieRepository.save(movie);
         return movieMapper.toResponseDto(movie);
@@ -379,7 +385,8 @@ public class MovieServiceImpl implements IMovieService {
                 base.active());
     }
 
-    private List<MovieCreditPersonResponse> getPersonResponseWithNewProfessions(List<MovieCreditRequestDto> credits) {
+    private List<MovieCreditPersonResponse> getPersonResponseWithNewProfessions(
+            List<MovieCreditRequestDto> credits) {
         // Extract person IDs
         Set<UUID> personIds = credits.stream()
                 .map(MovieCreditRequestDto::getPersonId)
@@ -420,7 +427,8 @@ public class MovieServiceImpl implements IMovieService {
 
                     // Professions that are requested but not already present
                     Set<Profession> newProfessions = requested.stream()
-                            .filter(profession -> !person.professions().contains(profession))
+                            .filter(profession -> !person.professions()
+                                    .contains(profession))
                             .collect(Collectors.toUnmodifiableSet());
 
                     // set new professions to movie credit response to save in person service

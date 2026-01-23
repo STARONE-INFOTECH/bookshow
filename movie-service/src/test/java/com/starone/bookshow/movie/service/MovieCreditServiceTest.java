@@ -17,7 +17,6 @@ import com.starone.bookshow.movie.client.IPersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
-import com.starone.bookshow.movie.helper.MovieUpdateTestDataFactory;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;

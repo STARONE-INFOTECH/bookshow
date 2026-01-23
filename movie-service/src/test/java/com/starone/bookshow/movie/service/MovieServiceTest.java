@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.movie.client.IPersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
@@ -46,6 +51,7 @@ import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.helper.MovieCreateTestDataFactory;
+import com.starone.bookshow.movie.helper.MovieGetTestDataFactory;
 import com.starone.bookshow.movie.helper.MovieUpdateTestDataFactory;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
@@ -55,6 +61,7 @@ import com.starone.common.enums.Language;
 import com.starone.common.enums.Profession;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
+import com.starone.common.exceptions.NotFoundException;
 import com.starone.common.response.record.MovieCreditPersonResponse;
 import com.starone.common.response.record.MovieCreditResponse;
 import com.starone.common.response.record.MovieResponse;
@@ -87,7 +94,7 @@ class MovieServiceTest {
     @DisplayName("create() method tests")
     class CreateTests {
         @Test
-        void should_throwBadRequest_when_movie_dto_is_null() {
+        void should_throw_bad_request_when_movie_request_is_null() {
             // Arrange (Given)
             MovieRequestDto movieDto = null;
             // + Act
@@ -102,7 +109,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_throwBadRequest_when_duplicate_person_as_credit() {
+        void should_throw_bad_request_when_duplicate_person_in_credits() {
             // Arrange
             MovieRequestDto movieDto = MovieCreateTestDataFactory.movieWithDuplicatePersonCredits();
 
@@ -113,7 +120,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_throwBadRequest_when_null_person_as_credit() {
+        void should_throw_bad_request_when_credit_person_id_is_null() {
             // Arrange
             MovieRequestDto requestDto = MovieCreateTestDataFactory.movieWithNullPersonCredits();
             // Act +Assert
@@ -132,7 +139,7 @@ class MovieServiceTest {
             Movie savedMovie = new Movie();
             savedMovie.setId(MovieCreateTestDataFactory.MOVIE_ID);
 
-            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse();
+            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse(true);
 
             when(movieMapper.toEntity(eq(movieDto))).thenReturn(movie);
             when(movieRepository.save(any())).thenReturn(savedMovie);
@@ -148,7 +155,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_create_movie_when_credits_are_empty() {
+        void should_create_movie_with_empty_credits() {
             // Arrange
             MovieRequestDto movieDto = MovieCreateTestDataFactory.movieWithEmptyCredits();
             Movie movie = new Movie();
@@ -158,7 +165,7 @@ class MovieServiceTest {
             savedMovie.setId(MovieCreateTestDataFactory.MOVIE_ID);
             savedMovie.setMovieCredits(Collections.emptyList());
 
-            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse();
+            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse(true);
 
             when(movieMapper.toEntity(eq(movieDto))).thenReturn(movie);
             when(movieRepository.save(any())).thenReturn(savedMovie);
@@ -178,7 +185,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_create_movie_when_single_credit() {
+        void should_create_movie_with_single_credit() {
             // Arrange
             MovieRequestDto movieDto = MovieCreateTestDataFactory.movieWithOneCredit();
 
@@ -187,7 +194,7 @@ class MovieServiceTest {
 
             Movie savedMovie = MovieCreateTestDataFactory.savedMovieWithOneCredit();
 
-            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse();
+            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse(true);
 
             when(movieMapper.toEntity(eq(movieDto))).thenReturn(movie);
             when(creditMapper.toEntity(any(MovieCreditRequestDto.class)))
@@ -225,7 +232,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_create_movie_and_sync_new_professions_for_multiple_persons() {
+        void should_sync_new_professions_when_creating_movie_with_multiple_credits() {
             // Arrange
             MovieRequestDto requestDto = MovieCreateTestDataFactory.movieWithTwoDiffPersonCredits();
 
@@ -234,7 +241,7 @@ class MovieServiceTest {
 
             Movie savedMovie = MovieCreateTestDataFactory.savedMovieWithTwoCreditsDifferentPerson();
 
-            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse();
+            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse(true);
 
             when(movieMapper.toEntity(any())).thenReturn(movie);
 
@@ -274,7 +281,7 @@ class MovieServiceTest {
         }
 
         @Test
-        void should_create_movie_and_no_new_professions_for_multiple_persons() {
+        void should_not_sync_professions_when_creating_movie_with_existing_professions() {
             // Arrange
             MovieRequestDto requestDto = MovieCreateTestDataFactory.movieWithTwoDiffPersonCredits();
 
@@ -283,7 +290,7 @@ class MovieServiceTest {
 
             Movie savedMovie = MovieCreateTestDataFactory.savedMovieWithTwoCreditsDifferentPerson();
 
-            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse();
+            MovieResponse movieResponse = MovieCreateTestDataFactory.baseMovieResponse(true);
 
             when(movieMapper.toEntity(any())).thenReturn(movie);
 
@@ -328,21 +335,21 @@ class MovieServiceTest {
     class RetrievalTests {
 
         @Test
-        void should_return_movie_when_movie_id_exists() {
+        void should_return_movie_when_id_exists() {
             // Arrange
 
-            UUID movieId = MovieCreateTestDataFactory.MOVIE_ID;
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
 
-            Movie movie = MovieCreateTestDataFactory.savedMovieWithTwoCreditsDifferentPerson();
+            Movie movie = MovieGetTestDataFactory.savedMovieWithTwoCreditsDifferentPerson();
 
             when(movieRepository.findById(movieId)).thenReturn(Optional.of(movie));
 
             when(personClient.getAllPersonByIds(anySet())).thenReturn(
                     List.of(
-                            MovieCreateTestDataFactory.personWithRequestedProfessions_1(),
-                            MovieCreateTestDataFactory.personWithRequestedProfessions_2()));
+                            MovieGetTestDataFactory.personWithRequestedProfessions_1(),
+                            MovieGetTestDataFactory.personWithRequestedProfessions_2()));
 
-            when(movieMapper.toResponseDto(any())).thenReturn(MovieCreateTestDataFactory.baseMovieResponse());
+            when(movieMapper.toResponseDto(any())).thenReturn(MovieGetTestDataFactory.baseMovieResponse(true));
             // Act
             MovieResponse response = movieService.getById(movieId);
 
@@ -356,12 +363,12 @@ class MovieServiceTest {
                             MovieCreditResponse::personId,
                             Function.identity()));
 
-            assertEquals("Leonardo DiCaprio", creditByPerson.get(MovieCreateTestDataFactory.PERSON_ID_1).personName());
+            assertEquals("Leonardo DiCaprio", creditByPerson.get(MovieGetTestDataFactory.PERSON_ID_1).personName());
 
             verify(movieRepository).findById(movieId);
             verify(personClient).getAllPersonByIds(Set.of(
-                    MovieCreateTestDataFactory.PERSON_ID_1,
-                    MovieCreateTestDataFactory.PERSON_ID_2));
+                    MovieGetTestDataFactory.PERSON_ID_1,
+                    MovieGetTestDataFactory.PERSON_ID_2));
 
         }
         /*
@@ -376,7 +383,7 @@ class MovieServiceTest {
     class UpdateTests {
 
         @Test
-        void should_update_movie_and_new_professions_for_multiple_persons() {
+        void should_sync_new_professions_when_updating_movie_with_multiple_credits() {
             // Arrange
             UUID movieId = MovieUpdateTestDataFactory.MOVIE_ID;
 
@@ -467,14 +474,185 @@ class MovieServiceTest {
         }
     }
 
+    // ==================== DEACTIVATE TESTS ====================
+    @Nested
+    @DisplayName("deactivate() method tests")
+    class DeactivateTests {
+
+        @Test
+        void should_deactivate_movie_when_movie_is_active() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+            Movie existingMovie = new Movie();
+            existingMovie.setId(movieId);
+            existingMovie.setActive(true);
+
+            Movie savedMovie = new Movie();
+            savedMovie.setId(movieId);
+            savedMovie.setActive(false);
+
+            MovieResponse movieResponse = MovieGetTestDataFactory.baseMovieResponse(false);
+            when(movieRepository.findById(movieId)).thenReturn(Optional.of(existingMovie));
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(savedMovie)).thenReturn(movieResponse);
+
+            // Act
+            MovieResponse response = movieService.deactivate(movieId);
+
+            // Assert
+            assertNotNull(response);
+            assertFalse(response.active());
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository).save(existingMovie);
+        }
+
+        @Test
+        void should_not_change_state_when_movie_is_already_inactive() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+            Movie existingMovie = new Movie();
+            existingMovie.setId(movieId);
+            existingMovie.setActive(false);
+
+            MovieResponse movieResponse = MovieGetTestDataFactory.baseMovieResponse(false);
+
+            when(movieRepository.findById(movieId)).thenReturn(Optional.of(existingMovie));
+            when(movieMapper.toResponseDto(any())).thenReturn(movieResponse);
+
+            // Act
+            MovieResponse response = movieService.deactivate(movieId);
+
+            // Assert
+            assertNotNull(response);
+            assertFalse(response.active());
+
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository, never()).save(any());
+        }
+
+        @Test
+        void should_throw_not_found_when_movie_does_not_exist() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+            when(movieRepository.findById(movieId)).thenReturn(Optional.empty());
+
+            // Act + Assert
+            assertThrows(NotFoundException.class, () -> movieService.deactivate(movieId));
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository, never()).save(any());
+            verifyNoInteractions(movieMapper);
+        }
+    }
+
+    // ==================== ACTIVATE TESTS ====================
+    @Nested
+    @DisplayName("activate() method tests")
+    class ActivateTests {
+
+        @Test
+        void should_activate_movie_when_movie_is_inactive() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+            Movie existingMovie = new Movie();
+            existingMovie.setId(movieId);
+            existingMovie.setActive(false);
+
+            Movie savedMovie = new Movie();
+            savedMovie.setId(movieId);
+            savedMovie.setActive(true);
+
+            MovieResponse movieResponse = MovieGetTestDataFactory.baseMovieResponse(true);
+
+            when(movieRepository.findById(movieId)).thenReturn(Optional.of(existingMovie));
+            when(movieRepository.save(any())).thenReturn(savedMovie);
+            when(movieMapper.toResponseDto(savedMovie)).thenReturn(movieResponse);
+            // Act
+            MovieResponse response = movieService.activate(movieId);
+
+            // Assert
+            assertNotNull(response);
+            assertTrue(response.active());
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository).save(existingMovie);
+        }
+
+        @Test
+        void should_not_change_state_when_movie_is_already_active() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+            Movie existingMovie = new Movie();
+            existingMovie.setId(movieId);
+            existingMovie.setActive(true);
+
+            MovieResponse movieResponse = MovieGetTestDataFactory.baseMovieResponse(true);
+
+            when(movieRepository.findById(movieId)).thenReturn(Optional.of(existingMovie));
+            when(movieMapper.toResponseDto(any())).thenReturn(movieResponse);
+            // Act
+            MovieResponse response = movieService.activate(movieId);
+
+            // Assert
+            assertNotNull(response);
+            assertTrue(response.active());
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository, never()).save(any());
+        }
+
+        @Test
+        void should_throw_not_found_when_movie_does_not_exist() {
+            // Arrange
+            UUID movieId = MovieGetTestDataFactory.MOVIE_ID;
+
+            when(movieRepository.findById(movieId)).thenReturn(Optional.empty());
+
+            assertThrows(NotFoundException.class, () -> movieService.activate(movieId));
+
+            // Act + Assert
+            verify(movieRepository).findById(movieId);
+            verify(movieRepository, never()).save(any());
+            verifyNoInteractions(movieMapper);
+        }
+    }
+
     // ==================== QUERY / PAGINATION TESTS ====================
     @Nested
     @DisplayName("Pagination and filtering tests")
     class QueryTests {
+
+        @Test
+        void should_return_now_showing_movies() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+
+            Movie movie1 = MovieGetTestDataFactory.activeReleasedMovie();
+            Movie movie2 = MovieGetTestDataFactory.activeReleasedMovie();
+
+            Page<Movie> moviePage = new PageImpl<>(
+                    List.of(movie1, movie2), pageable, 2);
+
+            MovieResponse response1 = MovieCreateTestDataFactory.baseMovieResponse(true);
+            MovieResponse response2 = MovieCreateTestDataFactory.baseMovieResponse(true);
+
+            when(movieRepository.findByActiveTrueAndReleaseDateLessThanEqual(any(LocalDate.class), eq(pageable)))
+                    .thenReturn(moviePage);
+            when(movieMapper.toResponseDto(movie1)).thenReturn(response1);
+            when(movieMapper.toResponseDto(movie2)).thenReturn(response2);
+
+            // Act
+            Page<MovieResponse> result = movieService.getNowShowing(pageable);
+            
+            // Assert
+            assertNotNull(result);
+            assertEquals(2, result.getTotalElements());
+            assertEquals(2, result.getContent().size());
+
+            assertTrue(result.getContent().stream().allMatch(MovieResponse::active));
+
+            verify(movieRepository).findByActiveTrueAndReleaseDateLessThanEqual(any(LocalDate.class), eq(pageable));
+            verify(movieMapper, times(2)).toResponseDto(any(Movie.class));
+        }
+
         /*
-         * @Test
-         * void shouldReturnNowShowingMovies() { ... }
-         * 
          * @Test
          * void shouldReturnUpcomingMovies() { ... }
          * 
@@ -484,10 +662,4 @@ class MovieServiceTest {
         // ... getAll, search, filter tests
     }
 
-    // ==================== DELETE TESTS ====================
-    @Nested
-    @DisplayName("delete() method tests")
-    class DeleteTests {
-        // ...
-    }
 }

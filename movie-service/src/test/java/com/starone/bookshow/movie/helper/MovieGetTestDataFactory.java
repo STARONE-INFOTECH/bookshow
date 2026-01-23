@@ -18,8 +18,8 @@ import com.starone.common.enums.Rating;
 import com.starone.common.response.record.MovieCreditPersonResponse;
 import com.starone.common.response.record.MovieResponse;
 
-public class MovieCreateTestDataFactory {
-    private MovieCreateTestDataFactory() {
+public class MovieGetTestDataFactory {
+    private MovieGetTestDataFactory() {
     }
 
     /*
@@ -46,57 +46,6 @@ public class MovieCreateTestDataFactory {
 
     /*
      * =====================================================
-     * REQUEST STATE (MOVIE CREATE REQUEST DTO's)
-     * =====================================================
-     */
-    private static MovieRequestDto baseCreateRequest(List<MovieCreditRequestDto> credits) {
-        return new MovieRequestDto(
-                "Inception",
-                "Inception",
-                "Dream within a dream",
-                List.of(Language.ENGLISH),
-                List.of(Genre.SCI_FI),
-                credits,
-                148,
-                Rating.PG_13,
-                LocalDate.of(2010, 7, 16),
-                "poster.jpg",
-                "trailer.mp4");
-    }
-
-    public static MovieRequestDto movieWithNullCredits() {
-        return baseCreateRequest(null);
-    }
-
-    public static MovieRequestDto movieWithEmptyCredits() {
-        return baseCreateRequest(Collections.emptyList());
-    }
-
-    public static MovieRequestDto movieWithOneCredit() {
-        return baseCreateRequest(List.of(singleCredit()));
-    }
-
-    public static MovieRequestDto movieWithTwoDiffPersonCredits() {
-        return baseCreateRequest(twoDifferentPersonCredits());
-    }
-
-    public static MovieRequestDto movieWithDuplicatePersonCredits() {
-        return baseCreateRequest(List.of(
-                credit(PERSON_ID_1, ACTOR_ONLY, 1),
-                credit(PERSON_ID_1, ACTOR_PRODUCER, 2)));
-    }
-
-    public static MovieRequestDto movieWithNullPersonCredits() {
-        return baseCreateRequest(List.of(
-                new MovieCreditRequestDto(
-                        null,
-                        ACTOR_DIRECTOR,
-                        MAIN_CHARACTER,
-                        1)));
-    }
-
-    /*
-     * =====================================================
      * CREDIT REQUEST HELPER's)
      * =====================================================
      */
@@ -111,10 +60,6 @@ public class MovieCreateTestDataFactory {
                 billingOrder);
     }
 
-    private static MovieCreditRequestDto singleCredit() {
-        return credit(PERSON_ID_1, ACTOR_DIRECTOR, 1);
-    }
-
     private static List<MovieCreditRequestDto> twoDifferentPersonCredits() {
         return List.of(
                 credit(PERSON_ID_1, ACTOR_DIRECTOR, 1),
@@ -126,19 +71,6 @@ public class MovieCreateTestDataFactory {
      * SAVED MOVIE ENTITIES (POST CREATE)
      * =====================================================
      */
-    public static Movie savedMovieWithOneCredit() {
-        Movie movie = new Movie();
-        movie.setId(MOVIE_ID);
-
-        MovieCredit credit = new MovieCredit();
-        credit.setId(CREDIT_ID_1);
-        credit.setPersonId(PERSON_ID_1);
-        credit.setBillingOrder(1);
-        credit.setMovie(movie);
-
-        movie.setMovieCredits(new ArrayList<>(List.of(credit)));
-        return movie;
-    }
 
     public static Movie savedMovieWithTwoCreditsDifferentPerson() {
         Movie movie = new Movie();
@@ -160,39 +92,19 @@ public class MovieCreateTestDataFactory {
         return movie;
     }
 
+    public static Movie activeReleasedMovie() {
+        Movie movie = new Movie();
+        movie.setId(MOVIE_ID);
+        movie.setActive(true);
+        movie.setReleaseDate(LocalDate.now().minusDays(1));
+        return movie;
+    }
+
     /*
      * =====================================================
      * PERSON SERVICE RESPONSES
      * =====================================================
      */
-    // Person already has all requested professions
-    public static MovieCreditPersonResponse personWithAllRequestedProfessions() {
-        return new MovieCreditPersonResponse(
-                PERSON_ID_1,
-                "Leonardo DiCaprio",
-                "leo.jpg",
-                ACTOR_DIRECTOR);
-    }
-
-    // Missing DIRECTOR
-    public static MovieCreditPersonResponse personMissingRequestedProfessions_1() {
-        return new MovieCreditPersonResponse(
-                PERSON_ID_1,
-                "Leonardo DiCaprio",
-                "leo.jpg",
-                ACTOR_ONLY);
-    }
-
-    // Missing ACTOR + PRODUCER
-    public static MovieCreditPersonResponse personMissingRequestedProfessions_2() {
-        return new MovieCreditPersonResponse(
-                PERSON_ID_2,
-                "Christopher Nolan",
-                "nolan.jpg",
-                Set.of(Profession.DIRECTOR));
-    }
-
-    // No new professions needed
     public static MovieCreditPersonResponse personWithRequestedProfessions_1() {
         return new MovieCreditPersonResponse(
                 PERSON_ID_1,
@@ -230,5 +142,4 @@ public class MovieCreateTestDataFactory {
                 "trailer.mp4",
                 isActive);
     }
-
 }
