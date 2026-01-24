@@ -6,22 +6,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
-import com.starone.common.dto.TheaterResponseDto;
+import com.starone.common.response.record.TheaterResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 public interface ITheaterService {
-    TheaterResponseDto create(TheaterRequestDto requestDto);
+    TheaterResponse create(TheaterRequestDto requestDto);
 
-    TheaterResponseDto getById(UUID id);
+    TheaterResponse getById(UUID id);
 
-    TheaterResponseDto update(UUID id, TheaterRequestDto requestDto);
+    TheaterResponse update(UUID id, TheaterRequestDto requestDto);
 
-    TheaterResponseDto deactivate(UUID id);
+    TheaterResponse deactivate(UUID id);
 
-    TheaterResponseDto activate(UUID id);
+    TheaterResponse activate(UUID id);
 
-    Page<TheaterResponseDto> getAllActive(Pageable pageable);
+    Page<TheaterResponse> getAllActive(Pageable pageable);
 
-    Page<TheaterResponseDto> getByCity(String city, Pageable pageable);
+    Page<TheaterResponse> getByCity(String city, Pageable pageable);
 
-    Page<TheaterResponseDto> getByCityAndActive(String city, Pageable pageable);
+    Page<TheaterResponse> getByCityAndActive(String city, Pageable pageable);
+   
 }

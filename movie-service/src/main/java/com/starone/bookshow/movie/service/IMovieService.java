@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.common.response.record.MovieResponse;
+import com.starone.common.response.record.MovieShowResponse;
 
 public interface IMovieService {
 
@@ -39,4 +40,11 @@ public interface IMovieService {
     boolean existsByNameIgnoreCase(String name);
 
     void deleteById(UUID id);
+
+    /*
+     * ====================================================================
+     * --- Internal Service-To-Service usable methods with Feign client ---
+     * ====================================================================
+     */
+    MovieShowResponse getByMovieId(UUID movieId);
 }

@@ -1,5 +1,6 @@
 package com.starone.bookshow.theater.service.impl;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -11,13 +12,15 @@ import com.starone.bookshow.theater.dto.ScreenRequestDto;
 import com.starone.bookshow.theater.entity.Screen;
 import com.starone.bookshow.theater.entity.Theater;
 import com.starone.bookshow.theater.mapper.IScreenMapper;
+import com.starone.bookshow.theater.projection.TheaterScreenShowProjection;
 import com.starone.bookshow.theater.repository.IScreenRepository;
 import com.starone.bookshow.theater.repository.ITheaterRepository;
 import com.starone.bookshow.theater.service.IScreenService;
-import com.starone.common.dto.ScreenResponseDto;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.BadRequestException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.ScreenResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +34,7 @@ public class ScreenServiceImpl implements IScreenService {
     private final IScreenMapper screenMapper;
 
     @Override
-    public ScreenResponseDto createScreen(UUID theaterId, ScreenRequestDto requestDto) {
+    public ScreenResponse createScreen(UUID theaterId, ScreenRequestDto requestDto) {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND, "Theater not found"));
 
@@ -51,14 +54,14 @@ public class ScreenServiceImpl implements IScreenService {
 
     @Override
     @Transactional(readOnly = true)
-    public ScreenResponseDto getScreenById(UUID screenId) {
+    public ScreenResponse getScreenById(UUID screenId) {
         Screen screen = screenRepository.findById(screenId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND, "Screen not found"));
         return screenMapper.toResponseDto(screen);
     }
 
     @Override
-    public ScreenResponseDto updateScreen(UUID screenId, ScreenRequestDto requestDto) {
+    public ScreenResponse updateScreen(UUID screenId, ScreenRequestDto requestDto) {
         Screen screen = screenRepository.findById(screenId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND, "Screen not found"));
 
@@ -66,17 +69,21 @@ public class ScreenServiceImpl implements IScreenService {
             validateSeatLayout(requestDto.getSeatLayoutJson(), requestDto.getTotalSeats());
         }
 
-        if (requestDto.getName() != null) screen.setName(requestDto.getName());
-        if (requestDto.getFacilities() != null) screen.setFacilities(requestDto.getFacilities());
-        if (requestDto.getSeatLayoutJson() != null) screen.setSeatLayoutJson(requestDto.getSeatLayoutJson());
-        if (requestDto.getTotalSeats() > 0) screen.setTotalSeats(requestDto.getTotalSeats());
+        if (requestDto.getName() != null)
+            screen.setName(requestDto.getName());
+        if (requestDto.getFacilities() != null)
+            screen.setFacilities(requestDto.getFacilities());
+        if (requestDto.getSeatLayoutJson() != null)
+            screen.setSeatLayoutJson(requestDto.getSeatLayoutJson());
+        if (requestDto.getTotalSeats() > 0)
+            screen.setTotalSeats(requestDto.getTotalSeats());
 
         screen = screenRepository.save(screen);
         return screenMapper.toResponseDto(screen);
     }
 
     @Override
-    public ScreenResponseDto deactivateScreen(UUID screenId) {
+    public ScreenResponse deactivateScreen(UUID screenId) {
         Screen screen = screenRepository.findById(screenId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
         screen.setActive(false);
@@ -85,7 +92,7 @@ public class ScreenServiceImpl implements IScreenService {
     }
 
     @Override
-    public ScreenResponseDto activateScreen(UUID screenId) {
+    public ScreenResponse activateScreen(UUID screenId) {
         Screen screen = screenRepository.findById(screenId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
         screen.setActive(true);
@@ -95,7 +102,7 @@ public class ScreenServiceImpl implements IScreenService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ScreenResponseDto> getScreensByTheaterId(UUID theaterId, Pageable pageable) {
+    public Page<ScreenResponse> getScreensByTheaterId(UUID theaterId, Pageable pageable) {
         // First validate theater exists
         theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
@@ -106,13 +113,40 @@ public class ScreenServiceImpl implements IScreenService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ScreenResponseDto> getActiveScreensByTheaterId(UUID theaterId, Pageable pageable) {
+    public Page<ScreenResponse> getActiveScreensByTheaterId(UUID theaterId, Pageable pageable) {
         theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(
+                    ErrorCodes.NOT_FOUND,"Screen not found with theater Id :"+theaterId));
 
         Page<Screen> page = screenRepository.findByTheaterIdAndActiveTrue(theaterId, pageable);
         return page.map(screenMapper::toResponseDto);
     }
+    
+    /*
+     * ====================================================================
+     * --- Internal Service-To-Service usable methods with Feign client ---
+     * ====================================================================
+     */
+
+    @Override
+    public TheaterScreenShowResponse getTheaterByScreenId(UUID screenId) {
+       TheaterScreenShowProjection screenTheaterProjection = screenRepository.findTheaterAndScreenByScreenId(screenId)
+       .orElseThrow(()-> new NotFoundException(
+        ErrorCodes.THEATER_NOT_FOUND, 
+        "Theater not found with screen id+"+screenId));
+        
+        return new TheaterScreenShowResponse(
+            screenTheaterProjection.getTheaterId(), 
+            screenTheaterProjection.getTheaterName(), 
+            screenTheaterProjection.getCity(), 
+            screenTheaterProjection.getScreenId(), 
+            screenTheaterProjection.getScreenName());
+    }
+    /*
+     * =====================================================================
+     * ------------------ Helper to enrich with screen --------------------
+     * =====================================================================
+     */
 
     // Simple validation - can be expanded with JSON schema or custom parser
     private void validateSeatLayout(String json, int totalSeats) {

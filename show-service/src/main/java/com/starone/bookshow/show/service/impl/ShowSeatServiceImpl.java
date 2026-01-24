@@ -13,15 +13,15 @@ import com.starone.bookshow.show.mapper.IShowSeatMapper;
 import com.starone.bookshow.show.repository.IShowRepository;
 import com.starone.bookshow.show.repository.IShowSeatRepository;
 import com.starone.bookshow.show.service.IShowSeatService;
-import com.starone.common.dto.ShowSeatResponseDto;
 import com.starone.common.enums.SeatStatus;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.ShowSeatResponse;
 
 import lombok.RequiredArgsConstructor;
 
-@Service
+@Service("showSeatService")
 @RequiredArgsConstructor
 @Transactional
 public class ShowSeatServiceImpl implements IShowSeatService {
@@ -33,7 +33,7 @@ public class ShowSeatServiceImpl implements IShowSeatService {
     private static final int LOCK_DURATION_MINUTES = 10;
 
     @Override
-    public List<ShowSeatResponseDto> lockSeats(UUID showId, List<String> seatNumbers, UUID userId) {
+    public List<ShowSeatResponse> lockSeats(UUID showId, List<String> seatNumbers, UUID userId) {
         validateShowExists(showId);
 
         LocalDateTime now = LocalDateTime.now();
@@ -42,13 +42,13 @@ public class ShowSeatServiceImpl implements IShowSeatService {
         int lockedCount = showSeatRepository.lockSeats(showId, seatNumbers, now, expiry, userId);
 
         if (lockedCount == 0) {
-            throw new ConflictException(ErrorCodes.CONFLICT, "No seats were available to lock");
+            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "No seats were available to lock");
         }
 
         if (lockedCount < seatNumbers.size()) {
             // Partial success - rollback partial locks
             releaseSeats(showId, seatNumbers);
-            throw new ConflictException(ErrorCodes.CONFLICT, "Only some seats were available. Try again.");
+            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "Only some seats were available. Try again.");
         }
 
         return showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers)
@@ -83,7 +83,7 @@ public class ShowSeatServiceImpl implements IShowSeatService {
 
         seats.forEach(seat -> {
             if (seat.getStatus() != SeatStatus.LOCKED) {
-                throw new ConflictException(ErrorCodes.CONFLICT, "Seat " + seat.getSeatNumber() + " is not locked");
+                throw new ConflictException(ErrorCodes.SEAT_NOT_LOCKED, "Seat " + seat.getSeatNumber() + " is not locked");
             }
             seat.setStatus(SeatStatus.BOOKED);
             seat.setBookingId(bookingId);
@@ -97,7 +97,7 @@ public class ShowSeatServiceImpl implements IShowSeatService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ShowSeatResponseDto> getSeatStatus(UUID showId, List<String> seatNumbers) {
+    public List<ShowSeatResponse> getSeatStatus(UUID showId, List<String> seatNumbers) {
         return showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers)
                 .stream()
                 .map(showSeatMapper::toResponseDto)
@@ -106,7 +106,7 @@ public class ShowSeatServiceImpl implements IShowSeatService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ShowSeatResponseDto> getAllSeatsForShow(UUID showId) {
+    public List<ShowSeatResponse> getAllSeatsForShow(UUID showId) {
         validateShowExists(showId);
         return showSeatRepository.findByShowId(showId)
                 .stream()
@@ -143,6 +143,12 @@ public class ShowSeatServiceImpl implements IShowSeatService {
 
         return availableCount == seatNumbers.size();
     }
+
+      /*
+     * =====================================================================
+     * ------------------ Helper to enrich with Show Seats -----------------
+     * =====================================================================
+     */
 
     private void validateShowExists(UUID showId) {
         showRepository.findById(showId)

@@ -47,6 +47,6 @@ public interface IShowSeatRepository extends JpaRepository<ShowSeat, UUID> {
             @Param("expiry") LocalDateTime expiry,
             @Param("userId") UUID userId);
 
-    Page<Show> findByScreenIdAndActiveTrueAndShowStartTimeBetween(
-            UUID screenId, LocalDateTime start, LocalDateTime end, Pageable pageable);
+    //Page<Show> findByScreenIdAndActiveTrueAndShowStartTimeBetween(
+     //       UUID screenId, LocalDateTime start, LocalDateTime end, Pageable pageable);
 }

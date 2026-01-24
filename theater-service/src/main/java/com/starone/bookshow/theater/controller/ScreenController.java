@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
 import com.starone.bookshow.theater.service.IScreenService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.ScreenResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.ScreenResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,52 +34,62 @@ public class ScreenController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ScreenResponseDto> createScreen(
+    public ApiResponse<ScreenResponse> createScreen(
             @PathVariable UUID theaterId,
             @Valid @RequestBody ScreenRequestDto requestDto) {
-        ScreenResponseDto response = screenService.createScreen(theaterId, requestDto);
-        return ApiResponse.success(response);
+        ScreenResponse response = screenService.createScreen(theaterId, requestDto);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/{screenId}")
-    public ApiResponse<ScreenResponseDto> getScreen(@PathVariable UUID screenId) {
-        ScreenResponseDto response = screenService.getScreenById(screenId);
-        return ApiResponse.success(response);
+    public ApiResponse<ScreenResponse> getScreen(@PathVariable UUID screenId) {
+        ScreenResponse response = screenService.getScreenById(screenId);
+        return ApiResponses.success(response);
     }
 
     @PatchMapping("/{screenId}")
-    public ApiResponse<ScreenResponseDto> updateScreen(
+    public ApiResponse<ScreenResponse> updateScreen(
             @PathVariable UUID screenId,
             @Valid @RequestBody ScreenRequestDto requestDto) {
-        ScreenResponseDto response = screenService.updateScreen(screenId, requestDto);
-        return ApiResponse.success(response);
+        ScreenResponse response = screenService.updateScreen(screenId, requestDto);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{screenId}/deactivate")
-    public ApiResponse<ScreenResponseDto> deactivateScreen(@PathVariable UUID screenId) {
-        ScreenResponseDto response = screenService.deactivateScreen(screenId);
-        return ApiResponse.success(response);
+    public ApiResponse<ScreenResponse> deactivateScreen(@PathVariable UUID screenId) {
+        ScreenResponse response = screenService.deactivateScreen(screenId);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{screenId}/activate")
-    public ApiResponse<ScreenResponseDto> activateScreen(@PathVariable UUID screenId) {
-        ScreenResponseDto response = screenService.activateScreen(screenId);
-        return ApiResponse.success(response);
+    public ApiResponse<ScreenResponse> activateScreen(@PathVariable UUID screenId) {
+        ScreenResponse response = screenService.activateScreen(screenId);
+        return ApiResponses.success(response);
     }
 
     @GetMapping
-    public ApiResponse<Page<ScreenResponseDto>> getScreens(
+    public ApiResponse<Page<ScreenResponse>> getScreens(
             @PathVariable UUID theaterId,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<ScreenResponseDto> page = screenService.getScreensByTheaterId(theaterId, pageable);
-        return ApiResponse.success(page);
+        Page<ScreenResponse> page = screenService.getScreensByTheaterId(theaterId, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/active")
-    public ApiResponse<Page<ScreenResponseDto>> getActiveScreens(
+    public ApiResponse<Page<ScreenResponse>> getActiveScreens(
             @PathVariable UUID theaterId,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<ScreenResponseDto> page = screenService.getActiveScreensByTheaterId(theaterId, pageable);
-        return ApiResponse.success(page);
+        Page<ScreenResponse> page = screenService.getActiveScreensByTheaterId(theaterId, pageable);
+        return ApiResponses.success(page);
+    }
+
+    /*
+     * ====================================================================
+     * --- Internal Service-To-Service usable methods with Feign client ---
+     * ====================================================================
+     */
+    @GetMapping("show/{screenId}")
+    public ApiResponse<TheaterScreenShowResponse> getTheaterByScreenId(@PathVariable("screenId") UUID screenId) {
+        return ApiResponses.success(screenService.getTheaterByScreenId(screenId));
     }
 }

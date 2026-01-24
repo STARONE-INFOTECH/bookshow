@@ -6,21 +6,29 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.common.dto.ScreenResponseDto;
+import com.starone.common.response.record.ScreenResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 public interface IScreenService {
-    
-    ScreenResponseDto createScreen(UUID theaterId, ScreenRequestDto requestDto);
 
-    ScreenResponseDto getScreenById(UUID screenId);
+    ScreenResponse createScreen(UUID theaterId, ScreenRequestDto requestDto);
 
-    ScreenResponseDto updateScreen(UUID screenId, ScreenRequestDto requestDto);
+    ScreenResponse getScreenById(UUID screenId);
 
-    ScreenResponseDto deactivateScreen(UUID screenId);
+    ScreenResponse updateScreen(UUID screenId, ScreenRequestDto requestDto);
 
-    ScreenResponseDto activateScreen(UUID screenId);
+    ScreenResponse deactivateScreen(UUID screenId);
 
-    Page<ScreenResponseDto> getScreensByTheaterId(UUID theaterId, Pageable pageable);
+    ScreenResponse activateScreen(UUID screenId);
 
-    Page<ScreenResponseDto> getActiveScreensByTheaterId(UUID theaterId, Pageable pageable);
+    Page<ScreenResponse> getScreensByTheaterId(UUID theaterId, Pageable pageable);
+
+    Page<ScreenResponse> getActiveScreensByTheaterId(UUID theaterId, Pageable pageable);
+
+     /*
+     * ====================================================================
+     * --- Internal Service-To-Service usable methods with Feign client ---
+     * ====================================================================
+     */
+    TheaterScreenShowResponse getTheaterByScreenId(UUID screenId);
 }

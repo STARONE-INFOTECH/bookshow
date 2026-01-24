@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
 import com.starone.bookshow.theater.service.ITheaterService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.TheaterResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.TheaterResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,57 +34,63 @@ public class TheaterController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<TheaterResponseDto> create(@Valid @RequestBody TheaterRequestDto requestDto) {
-        TheaterResponseDto response = theaterService.create(requestDto);
-        return ApiResponse.success(response);
+    public ApiResponse<TheaterResponse> create(@Valid @RequestBody TheaterRequestDto requestDto) {
+        TheaterResponse response = theaterService.create(requestDto);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<TheaterResponseDto> getById(@PathVariable UUID id) {
-        TheaterResponseDto response = theaterService.getById(id);
-        return ApiResponse.success(response);
+    public ApiResponse<TheaterResponse> getById(@PathVariable UUID id) {
+        TheaterResponse response = theaterService.getById(id);
+        return ApiResponses.success(response);
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse<TheaterResponseDto> update(
+    public ApiResponse<TheaterResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody TheaterRequestDto requestDto) {
-        TheaterResponseDto response = theaterService.update(id, requestDto);
-        return ApiResponse.success(response);
+        TheaterResponse response = theaterService.update(id, requestDto);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/deactivate")
-    public ApiResponse<TheaterResponseDto> deactivate(@PathVariable UUID id) {
-        TheaterResponseDto response = theaterService.deactivate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<TheaterResponse> deactivate(@PathVariable UUID id) {
+        TheaterResponse response = theaterService.deactivate(id);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{id}/activate")
-    public ApiResponse<TheaterResponseDto> activate(@PathVariable UUID id) {
-        TheaterResponseDto response = theaterService.activate(id);
-        return ApiResponse.success(response);
+    public ApiResponse<TheaterResponse> activate(@PathVariable UUID id) {
+        TheaterResponse response = theaterService.activate(id);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/active")
-    public ApiResponse<Page<TheaterResponseDto>> getAllActive(
+    public ApiResponse<Page<TheaterResponse>> getAllActive(
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<TheaterResponseDto> page = theaterService.getAllActive(pageable);
-        return ApiResponse.success(page);
+        Page<TheaterResponse> page = theaterService.getAllActive(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/city/{city}")
-    public ApiResponse<Page<TheaterResponseDto>> getByCity(
+    public ApiResponse<Page<TheaterResponse>> getByCity(
             @PathVariable String city,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<TheaterResponseDto> page = theaterService.getByCity(city, pageable);
-        return ApiResponse.success(page);
+        Page<TheaterResponse> page = theaterService.getByCity(city, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/city/{city}/active")
-    public ApiResponse<Page<TheaterResponseDto>> getByCityAndActive(
+    public ApiResponse<Page<TheaterResponse>> getByCityAndActive(
             @PathVariable String city,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<TheaterResponseDto> page = theaterService.getByCityAndActive(city, pageable);
-        return ApiResponse.success(page);
+        Page<TheaterResponse> page = theaterService.getByCityAndActive(city, pageable);
+        return ApiResponses.success(page);
     }
+     /*
+     * =====================================================================
+     * ------ Internal Service usable endpoints by using Feign client ------
+     * =====================================================================
+     */
+
 }

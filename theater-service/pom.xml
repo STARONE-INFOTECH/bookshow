@@ -4,12 +4,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.starone</groupId>
-		<artifactId>starone-monorepo</artifactId>
+		<artifactId>starone-apps</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
-		<relativePath>../../pom.xml</relativePath>
+		<relativePath>../../../pom.xml</relativePath>
 	</parent>
 	<artifactId>theater-service</artifactId>
-	<name>StarOne Theater Service Application</name>
+	<name>StarOne : Bookshow :: Theater Service </name>
 	<description>Manage Theater data</description>
 	
 	<dependencies>
@@ -49,7 +49,12 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
 		</plugins>
 	</build>
+
 
 </project>

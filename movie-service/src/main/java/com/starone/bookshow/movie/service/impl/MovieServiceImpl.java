@@ -27,6 +27,7 @@ import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
+import com.starone.bookshow.movie.projection.MovieShowProjection;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieService;
 import com.starone.common.enums.Genre;
@@ -38,6 +39,7 @@ import com.starone.common.exceptions.NotFoundException;
 import com.starone.common.response.record.MovieCreditPersonResponse;
 import com.starone.common.response.record.MovieCreditResponse;
 import com.starone.common.response.record.MovieResponse;
+import com.starone.common.response.record.MovieShowResponse;
 import com.starone.common.response.record.PersonProfessionAddition;
 
 import lombok.RequiredArgsConstructor;
@@ -143,7 +145,7 @@ public class MovieServiceImpl implements IMovieService {
     public MovieResponse deactivate(UUID id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
-        if(Boolean.FALSE.equals(movie.getActive())){
+        if (Boolean.FALSE.equals(movie.getActive())) {
             return movieMapper.toResponseDto(movie);
         }
         movie.setActive(false);
@@ -240,6 +242,22 @@ public class MovieServiceImpl implements IMovieService {
 
         movieRepository.deleteById(id);
         log.info("Movie deleted successfully. id={}", id);
+    }
+
+    /*
+     * ========================================================================
+     * - External Service-To-Service usable service methods with Feign client -
+     * ========================================================================
+     */
+    @Override
+    public MovieShowResponse getByMovieId(UUID movieId) {
+        MovieShowProjection movieShow = movieRepository.findByMovieId(movieId)
+                .orElseThrow(() -> new NotFoundException(
+                        ErrorCodes.MOVIE_NOT_FOUND, "Movie not found with id :" + movieId));
+        return new MovieShowResponse(
+                movieShow.getId(),
+                movieShow.getTitle(),
+                movieShow.getPosterUrl());
     }
 
     /*

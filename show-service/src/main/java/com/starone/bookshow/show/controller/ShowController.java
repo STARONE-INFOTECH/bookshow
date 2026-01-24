@@ -22,9 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.starone.bookshow.show.dto.ShowRequestDto;
 import com.starone.bookshow.show.service.IShowSeatService;
 import com.starone.bookshow.show.service.IShowService;
-import com.starone.common.dto.ApiResponse;
-import com.starone.common.dto.ShowResponseDto;
-import com.starone.common.dto.ShowSeatResponseDto;
+import com.starone.common.request.ApiResponses;
+import com.starone.common.response.record.ApiResponse;
+import com.starone.common.response.record.ShowResponse;
+import com.starone.common.response.record.ShowSeatResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/shows")
 @RequiredArgsConstructor
 public class ShowController {
+    
     private final IShowService showService;
     private final IShowSeatService showSeatService;
 
@@ -40,79 +42,79 @@ public class ShowController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ShowResponseDto> createShow(@Valid @RequestBody ShowRequestDto requestDto) {
-        ShowResponseDto response = showService.createShow(requestDto);
-        return ApiResponse.success(response);
+    public ApiResponse<ShowResponse> createShow(@Valid @RequestBody ShowRequestDto requestDto) {
+        ShowResponse response = showService.createShow(requestDto);
+        return ApiResponses.success(response);
     }
 
     @PatchMapping("/{showId}")
-    public ApiResponse<ShowResponseDto> updateShow(
+    public ApiResponse<ShowResponse> updateShow(
             @PathVariable UUID showId,
             @Valid @RequestBody ShowRequestDto requestDto) {
-        ShowResponseDto response = showService.updateShow(showId, requestDto);
-        return ApiResponse.success(response);
+        ShowResponse response = showService.updateShow(showId, requestDto);
+        return ApiResponses.success(response);
     }
 
     @PutMapping("/{showId}/deactivate")
     public ApiResponse<Void> deactivateShow(@PathVariable UUID showId) {
         showService.deactivateShow(showId);
-        return ApiResponse.success(null);
+        return ApiResponses.success(null);
     }
 
     @PutMapping("/{showId}/activate")
     public ApiResponse<Void> activateShow(@PathVariable UUID showId) {
         showService.activateShow(showId);
-        return ApiResponse.success(null);
+        return ApiResponses.success(null);
     }
 
     // ====================== PUBLIC ENDPOINTS ======================
 
     @GetMapping("/{showId}")
-    public ApiResponse<ShowResponseDto> getShowById(@PathVariable UUID showId) {
-        ShowResponseDto response = showService.getShowById(showId);
-        return ApiResponse.success(response);
+    public ApiResponse<ShowResponse> getShowById(@PathVariable UUID showId) {
+        ShowResponse response = showService.getShowById(showId);
+        return ApiResponses.success(response);
     }
 
     @GetMapping("/movie/{movieId}")
-    public ApiResponse<Page<ShowResponseDto>> getShowsByMovieId(
+    public ApiResponse<Page<ShowResponse>> getShowsByMovieId(
             @PathVariable UUID movieId,
             @PageableDefault(size = 20, sort = "showStartTime") Pageable pageable) {
-        Page<ShowResponseDto> page = showService.getShowsByMovieId(movieId, pageable);
-        return ApiResponse.success(page);
+        Page<ShowResponse> page = showService.getShowsByMovieId(movieId, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/screen/{screenId}/date")
-    public ApiResponse<Page<ShowResponseDto>> getShowsByScreenAndDate(
+    public ApiResponse<Page<ShowResponse>> getShowsByScreenAndDate(
             @PathVariable UUID screenId,
             @RequestParam LocalDateTime date,
             @PageableDefault(size = 20, sort = "showStartTime") Pageable pageable) {
-        Page<ShowResponseDto> page = showService.getShowsByScreenAndDate(screenId, date, pageable);
-        return ApiResponse.success(page);
+        Page<ShowResponse> page = showService.getShowsByScreenAndDate(screenId, date, pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/today")
-    public ApiResponse<Page<ShowResponseDto>> getTodayShows(
+    public ApiResponse<Page<ShowResponse>> getTodayShows(
             @PageableDefault(size = 20, sort = "showStartTime") Pageable pageable) {
-        Page<ShowResponseDto> page = showService.getTodayShows(pageable);
-        return ApiResponse.success(page);
+        Page<ShowResponse> page = showService.getTodayShows(pageable);
+        return ApiResponses.success(page);
     }
 
     @GetMapping("/upcoming")
-    public ApiResponse<Page<ShowResponseDto>> getUpcomingShows(
+    public ApiResponse<Page<ShowResponse>> getUpcomingShows(
             @PageableDefault(size = 20, sort = "showStartTime") Pageable pageable) {
-        Page<ShowResponseDto> page = showService.getUpcomingShows(pageable);
-        return ApiResponse.success(page);
+        Page<ShowResponse> page = showService.getUpcomingShows(pageable);
+        return ApiResponses.success(page);
     }
 
     // ====================== SEAT OPERATIONS ======================
 
     @PostMapping("/{showId}/seats/lock")
-    public ApiResponse<List<ShowSeatResponseDto>> lockSeats(
+    public ApiResponse<List<ShowSeatResponse>> lockSeats(
             @PathVariable UUID showId,
             @RequestBody List<String> seatNumbers,
             @RequestParam UUID userId) {
-        List<ShowSeatResponseDto> lockedSeats = showSeatService.lockSeats(showId, seatNumbers, userId);
-        return ApiResponse.success(lockedSeats);
+        List<ShowSeatResponse> lockedSeats = showSeatService.lockSeats(showId, seatNumbers, userId);
+        return ApiResponses.success(lockedSeats);
     }
 
     @PostMapping("/{showId}/seats/check")
@@ -120,20 +122,20 @@ public class ShowController {
             @PathVariable UUID showId,
             @RequestBody List<String> seatNumbers) {
         boolean available = showSeatService.areSeatsAvailable(showId, seatNumbers);
-        return ApiResponse.success(available);
+        return ApiResponses.success(available);
     }
 
     @GetMapping("/{showId}/seats")
-    public ApiResponse<List<ShowSeatResponseDto>> getAllSeats(@PathVariable UUID showId) {
-        List<ShowSeatResponseDto> seats = showSeatService.getAllSeatsForShow(showId);
-        return ApiResponse.success(seats);
+    public ApiResponse<List<ShowSeatResponse>> getAllSeats(@PathVariable UUID showId) {
+        List<ShowSeatResponse> seats = showSeatService.getAllSeatsForShow(showId);
+        return ApiResponses.success(seats);
     }
 
     @GetMapping("/{showId}/seats/status")
-    public ApiResponse<List<ShowSeatResponseDto>> getSeatStatus(
+    public ApiResponse<List<ShowSeatResponse>> getSeatStatus(
             @PathVariable UUID showId,
             @RequestBody List<String> seatNumbers) {
-        List<ShowSeatResponseDto> status = showSeatService.getSeatStatus(showId, seatNumbers);
-        return ApiResponse.success(status);
+        List<ShowSeatResponse> status = showSeatService.getSeatStatus(showId, seatNumbers);
+        return ApiResponses.success(status);
     }
 }

@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.starone.bookshow.show.entity.Show;
 
-public interface IShowRepository extends JpaRepository<Show,UUID>{
+public interface IShowRepository extends JpaRepository<Show, UUID> {
     // Find shows by movie ID (for movie details page)
     List<Show> findByMovieId(UUID movieId);
 
@@ -24,17 +24,23 @@ public interface IShowRepository extends JpaRepository<Show,UUID>{
 
     // Find active shows for a screen on a specific date
     Page<Show> findByScreenIdAndActiveTrueAndShowStartTimeBetween(
-            UUID screenId, LocalDateTime start, LocalDateTime end,Pageable pageable);
+            UUID screenId, LocalDateTime start, LocalDateTime end, Pageable pageable);
 
     // Find upcoming shows (active and start time > now)
     Page<Show> findByActiveTrueAndShowStartTimeAfter(LocalDateTime now, Pageable pageable);
 
     // Find shows running today (for home page / now showing)
     @Query("SELECT s FROM Show s WHERE s.active = true AND s.showStartTime >= :start AND s.showStartTime < :end")
-    Page<Show> findTodayShows(@Param("start") LocalDateTime dayStart, @Param("end") LocalDateTime dayEnd, Pageable pageable);
+    Page<Show> findTodayShows(@Param("start") LocalDateTime dayStart, @Param("end") LocalDateTime dayEnd,
+            Pageable pageable);
 
     // Find shows by theater (via screen)
-    @Query("SELECT s FROM Show s WHERE s.screenId IN (SELECT sc.id FROM Screen sc WHERE sc.theater.id = :theaterId) AND s.active = true")
+    @Query("""
+                SELECT s
+                FROM Show s
+                WHERE s.theaterId = :theaterId
+                  AND s.active = true
+            """)
     Page<Show> findByTheaterId(@Param("theaterId") UUID theaterId, Pageable pageable);
 
     // Check for overlapping shows on same screen

@@ -19,19 +19,19 @@ import com.starone.bookshow.show.mapper.IShowSeatMapper;
 import com.starone.bookshow.show.repository.IShowRepository;
 import com.starone.bookshow.show.repository.IShowSeatRepository;
 import com.starone.bookshow.show.service.IShowService;
-import com.starone.common.dto.MovieResponseDto;
-import com.starone.common.dto.ScreenResponseDto;
-import com.starone.common.dto.ShowResponseDto;
-import com.starone.common.dto.ShowSeatResponseDto;
-import com.starone.common.dto.TheaterResponseDto;
 import com.starone.common.enums.SeatStatus;
 import com.starone.common.error.ErrorCodes;
 import com.starone.common.exceptions.ConflictException;
 import com.starone.common.exceptions.NotFoundException;
+import com.starone.common.response.record.MovieShowResponse;
+import com.starone.common.response.record.ScreenResponse;
+import com.starone.common.response.record.ShowResponse;
+import com.starone.common.response.record.ShowSeatResponse;
+import com.starone.common.response.record.TheaterScreenShowResponse;
 
 import lombok.RequiredArgsConstructor;
 
-@Service
+@Service("showService")
 @RequiredArgsConstructor
 @Transactional
 public class ShowServiceImpl implements IShowService {
@@ -44,42 +44,42 @@ public class ShowServiceImpl implements IShowService {
     private final TheaterClient theaterClient; // Feign for screen/theater
 
     @Override
-    public ShowResponseDto createShow(ShowRequestDto requestDto) {
+    public ShowResponse createShow(ShowRequestDto requestDto) {        
         // Validate movie and screen exist
         movieClient.getMovieById(requestDto.getMovieId());
-        ScreenResponseDto screen = theaterClient.getScreenById(requestDto.getScreenId());
+        ScreenResponse screen = theaterClient.getScreenById(requestDto.getScreenId());
 
         // Check no overlapping show on same screen
         if (showRepository.existsByScreenIdAndShowStartTimeBetween(
                 requestDto.getScreenId(),
                 requestDto.getShowStartTime().minusMinutes(30), // buffer
                 requestDto.getShowStartTime().plusHours(4))) {
-            throw new ConflictException(ErrorCodes.CONFLICT, "Screen has overlapping show");
+            throw new ConflictException(ErrorCodes.SCREEN_SHOW_OVERLAP, "Screen has overlapping show");
         }
 
         Show show = showMapper.toEntity(requestDto);
         show.setShowEndTime(calculateEndTime(show.getShowStartTime(), screen));
-        show.setTotalSeats(screen.getTotalSeats());
-        show.setAvailableSeats(screen.getTotalSeats());
+        show.setTotalSeats(screen.totalSeats());
+        show.setAvailableSeats(screen.totalSeats());
 
         show = showRepository.save(show);
 
         // Generate ShowSeats from screen layout
-        generateShowSeats(show, screen.getSeatLayoutJson(), requestDto.getPricingJson());
+        generateShowSeats(show, screen.seatLayoutJson(), requestDto.getPricingJson());
 
         return enrichShowResponse(show);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ShowResponseDto getShowById(UUID showId) {
+    public ShowResponse getShowById(UUID showId) {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
         return enrichShowResponse(show);
     }
 
     @Override
-    public ShowResponseDto updateShow(UUID showId, ShowRequestDto requestDto) {
+    public ShowResponse updateShow(UUID showId, ShowRequestDto requestDto) {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
 
@@ -110,7 +110,7 @@ public class ShowServiceImpl implements IShowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShowResponseDto> getShowsByMovieId(UUID movieId, Pageable pageable) {
+    public Page<ShowResponse> getShowsByMovieId(UUID movieId, Pageable pageable) {
         Page<Show> page = showRepository.findByMovieId(movieId, pageable);
         return page.map(this::enrichShowResponse);
     }
@@ -118,7 +118,7 @@ public class ShowServiceImpl implements IShowService {
     // ... other list methods similar (use repository queries + map to enrich)
 
     @Override
-    public List<ShowSeatResponseDto> lockSeats(UUID showId, List<String> seatNumbers, UUID userId) {
+    public List<ShowSeatResponse> lockSeats(UUID showId, List<String> seatNumbers, UUID userId) {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
 
@@ -128,7 +128,7 @@ public class ShowServiceImpl implements IShowService {
         int lockedCount = showSeatRepository.lockSeats(showId, seatNumbers, now, expiry, userId);
 
         if (lockedCount != seatNumbers.size()) {
-            throw new ConflictException(ErrorCodes.CONFLICT, "Some seats are not available");
+            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "Some seats are not available");
         }
 
         return showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers)
@@ -160,7 +160,7 @@ public class ShowServiceImpl implements IShowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShowResponseDto> getShowsByScreenAndDate(UUID screenId, LocalDateTime date, Pageable pageable) {
+    public Page<ShowResponse> getShowsByScreenAndDate(UUID screenId, LocalDateTime date, Pageable pageable) {
         // Validate screen exists
         theaterClient.getScreenById(screenId);
 
@@ -176,7 +176,7 @@ public class ShowServiceImpl implements IShowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShowResponseDto> getTodayShows(Pageable pageable) {
+    public Page<ShowResponse> getTodayShows(Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59, 999999999);
@@ -187,14 +187,19 @@ public class ShowServiceImpl implements IShowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShowResponseDto> getUpcomingShows(Pageable pageable) {
+    public Page<ShowResponse> getUpcomingShows(Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
 
         Page<Show> page = showRepository.findByActiveTrueAndShowStartTimeAfter(now, pageable);
         return page.map(this::enrichShowResponse);
     }
 
-    // Helper methods
+      /*
+     * =====================================================================
+     * ------------------ Helper to enrich with Show -----------------------
+     * =====================================================================
+     */
+
     private void generateShowSeats(Show show, String layoutJson, String pricingJson) {
         // Parse layoutJson, create ShowSeat for each seat
         // Use Jackson or custom parser
@@ -202,27 +207,33 @@ public class ShowServiceImpl implements IShowService {
         // status = AVAILABLE
     }
 
-    private LocalDateTime calculateEndTime(LocalDateTime start, ScreenResponseDto screen) {
+    private LocalDateTime calculateEndTime(LocalDateTime start, ScreenResponse screen) {
         // Fetch movie duration from movie-service or pass in request
         // return start.plusMinutes(duration);
         return start.plusHours(2).plusMinutes(30); // placeholder
     }
 
-    private ShowResponseDto enrichShowResponse(Show show) {
-        ShowResponseDto dto = showMapper.toResponseDto(show);
+    private ShowResponse enrichShowResponse(Show show) {
+        MovieShowResponse movie = movieClient.getMovieById(show.getMovieId());
+        TheaterScreenShowResponse theater = theaterClient.getTheaterByScreenId(show.getScreenId());
 
-        MovieResponseDto movie = movieClient.getMovieById(show.getMovieId());
-        dto.setMovieTitle(movie.getTitle());
-        dto.setMoviePosterUrl(movie.getPosterUrl());
-
-        ScreenResponseDto screen = theaterClient.getScreenById(show.getScreenId());
-        dto.setScreenName(screen.getName());
-
-        TheaterResponseDto theater = theaterClient.getTheaterByScreenId(show.getScreenId());
-        dto.setTheaterId(theater.getId());
-        dto.setTheaterName(theater.getName());
-        dto.setTheaterCity(theater.getCity());
-
-        return dto;
+        return new ShowResponse(
+                show.getId(),
+                show.getMovieId(),
+                movie.title(),
+                movie.posterUrl(),
+                theater.screenId(),
+                theater.screenName(),
+                theater.theaterId(),
+                theater.theaterName(),
+                theater.theaterCity(),
+                show.getShowStartTime(),
+                show.getShowEndTime(),
+                show.getShowType(),
+                show.getFormats(),
+                show.getPricingJson(),
+                show.getTotalSeats(),
+                show.getAvailableSeats(),
+                show.isActive());
     }
 }

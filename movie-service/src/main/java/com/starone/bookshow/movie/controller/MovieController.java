@@ -22,6 +22,7 @@ import com.starone.bookshow.movie.service.IMovieService;
 import com.starone.common.request.ApiResponses;
 import com.starone.common.response.record.ApiResponse;
 import com.starone.common.response.record.MovieResponse;
+import com.starone.common.response.record.MovieShowResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -109,4 +110,15 @@ public class MovieController {
         Page<MovieResponse> page = movieService.filterByLanguage(language, pageable);
         return ApiResponses.success(page);
     }
+
+    /*
+     * ======================================================================
+     * - Internal Service-to-Service usable endpoints by using Feign client -
+     * ======================================================================
+     */
+    @GetMapping("/show/{movieId}")
+    public ApiResponse<MovieShowResponse> getMovieById(@PathVariable("movieId") UUID movieId){
+        return ApiResponses.success(movieService.getByMovieId(movieId));
+    }
+
 }

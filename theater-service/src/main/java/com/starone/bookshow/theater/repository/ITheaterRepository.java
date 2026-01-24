@@ -16,4 +16,6 @@ public interface ITheaterRepository extends JpaRepository<Theater, UUID> {
     Page<Theater> findByCityIgnoreCaseAndActiveTrue(String city, Pageable pageable);
 
     boolean existsByNameAndCityIgnoreCase(String name, String city);
+
+    
 }

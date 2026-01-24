@@ -3,11 +3,15 @@ package com.starone.bookshow.theater.dto;
 import java.util.Set;
 import java.util.UUID;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class TheaterRequestDto {
     private String name;
     private String description;

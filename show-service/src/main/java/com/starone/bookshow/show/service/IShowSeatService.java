@@ -4,14 +4,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.starone.common.dto.ShowSeatResponseDto;
+import com.starone.common.response.record.ShowSeatResponse;
 
 public interface IShowSeatService {
     /**
      * Lock seats for a user (temporary hold - 10 minutes)
      * Used during booking flow
      */
-    List<ShowSeatResponseDto> lockSeats(UUID showId, List<String> seatNumbers, UUID userId);
+    List<ShowSeatResponse> lockSeats(UUID showId, List<String> seatNumbers, UUID userId);
 
     /**
      * Release seats (manual or on timeout)
@@ -26,12 +26,12 @@ public interface IShowSeatService {
     /**
      * Get current status of specific seats
      */
-    List<ShowSeatResponseDto> getSeatStatus(UUID showId, List<String> seatNumbers);
+    List<ShowSeatResponse> getSeatStatus(UUID showId, List<String> seatNumbers);
 
     /**
      * Get all seats for a show (for admin or seat map with status)
      */
-    List<ShowSeatResponseDto> getAllSeatsForShow(UUID showId);
+    List<ShowSeatResponse> getAllSeatsForShow(UUID showId);
 
     /**
      * Release all expired locks (called by scheduled job)
