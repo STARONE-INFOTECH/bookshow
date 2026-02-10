@@ -25,6 +25,7 @@ import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
+import com.starone.bookshow.movie.exception.MovieException;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.mapper.IMovieMapper;
 import com.starone.bookshow.movie.projection.MovieShowProjection;
@@ -33,14 +34,12 @@ import com.starone.bookshow.movie.service.IMovieService;
 import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
 import com.starone.common.enums.Profession;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.MovieCreditResponse;
-import com.starone.common.response.record.MovieResponse;
-import com.starone.common.response.record.MovieShowResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.MovieResponse;
+import com.starone.springcommon.response.record.MovieShowResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
 
 import lombok.RequiredArgsConstructor;
 
@@ -83,12 +82,14 @@ public class MovieServiceImpl implements IMovieService {
     @Override
     @Transactional(readOnly = true)
     public MovieResponse getById(UUID id) {
-        Objects.requireNonNull(id, "Movie Id is required");
+        if (id == null) {
+            throw new MovieException(ErrorCode.INVALID_MOVIE_ID);
+        }
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("Movie not found with id : {}", id);
-                    return new NotFoundException(
-                            ErrorCodes.MOVIE_NOT_FOUND,
+                    return new MovieException(
+                            ErrorCode.MOVIE_NOT_FOUND,
                             "Movie not found with id: " + id);
                 });
 
@@ -109,16 +110,16 @@ public class MovieServiceImpl implements IMovieService {
     @Override
     public MovieResponse update(UUID id, MovieRequestDto movieRequestDto) {
         if (id == null) {
-            throw new BadRequestException(
-                    ErrorCodes.BAD_REQUEST,
+            throw new MovieException(
+                    ErrorCode.INVALID_MOVIE_ID,
                     "Movie Id can not be null");
         }
 
         validateMovieRequest(movieRequestDto);
 
         Movie existingMovie = movieRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(
-                        ErrorCodes.MOVIE_NOT_FOUND,
+                .orElseThrow(() -> new MovieException(
+                        ErrorCode.MOVIE_NOT_FOUND,
                         "Movie not found with id: " + id));
 
         // mapping MovieDto with existingMovie
@@ -143,8 +144,11 @@ public class MovieServiceImpl implements IMovieService {
 
     @Override
     public MovieResponse deactivate(UUID id) {
+        if (id == null) {
+            throw new MovieException(ErrorCode.INVALID_MOVIE_ID);
+        }
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
+                .orElseThrow(() -> new MovieException(ErrorCode.MOVIE_NOT_FOUND));
         if (Boolean.FALSE.equals(movie.getActive())) {
             return movieMapper.toResponseDto(movie);
         }
@@ -155,8 +159,11 @@ public class MovieServiceImpl implements IMovieService {
 
     @Override
     public MovieResponse activate(UUID id) {
+        if (id == null) {
+            throw new MovieException(ErrorCode.INVALID_MOVIE_ID);
+        }
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.MOVIE_NOT_FOUND));
+                .orElseThrow(() -> new MovieException(ErrorCode.MOVIE_NOT_FOUND));
         if (Boolean.TRUE.equals(movie.getActive())) {
             return movieMapper.toResponseDto(movie);
         }
@@ -235,8 +242,8 @@ public class MovieServiceImpl implements IMovieService {
     @Override
     public void deleteById(UUID id) {
         if (!movieRepository.existsById(id)) {
-            throw new NotFoundException(
-                    ErrorCodes.MOVIE_NOT_FOUND,
+            throw new MovieException(
+                    ErrorCode.MOVIE_NOT_FOUND,
                     "Movie not found with id: " + id);
         }
 
@@ -251,9 +258,9 @@ public class MovieServiceImpl implements IMovieService {
      */
     @Override
     public MovieShowResponse getByMovieId(UUID movieId) {
-        MovieShowProjection movieShow = movieRepository.findByMovieId(movieId)
-                .orElseThrow(() -> new NotFoundException(
-                        ErrorCodes.MOVIE_NOT_FOUND, "Movie not found with id :" + movieId));
+        MovieShowProjection movieShow = movieRepository.findMovieById(movieId)
+                .orElseThrow(() -> new MovieException(
+                        ErrorCode.MOVIE_NOT_FOUND, "Movie not found with id :" + movieId));
         return new MovieShowResponse(
                 movieShow.getId(),
                 movieShow.getTitle(),
@@ -267,9 +274,9 @@ public class MovieServiceImpl implements IMovieService {
      */
     private void validateMovieRequest(MovieRequestDto requestDto) {
         if (requestDto == null) {
-            throw new BadRequestException(
-                    ErrorCodes.BAD_REQUEST,
-                    "Movie requestDto is null");
+            throw new MovieException(
+                    ErrorCode.INVALID_MOVIE,
+                    "Movie request is null");
         }
         List<MovieCreditRequestDto> credits = Optional.ofNullable(requestDto.getMovieCredits())
                 .orElse(Collections.emptyList());
@@ -282,13 +289,13 @@ public class MovieServiceImpl implements IMovieService {
         for (MovieCreditRequestDto credit : credits) {
             UUID personId = credit.getPersonId();
             if (personId == null) {
-                throw new BadRequestException(
-                        ErrorCodes.BAD_REQUEST,
+                throw new MovieException(
+                        ErrorCode.INVALID_MOVIE_CREDIT_ID,
                         "PersonId cannot be null in movie credits");
             }
             if (!personIds.add(personId)) {
-                throw new BadRequestException(
-                        ErrorCodes.BAD_REQUEST,
+                throw new MovieException(
+                        ErrorCode.DUPLICATE_MOVIE_CREDIT,
                         "Same person cannot be added multiple times as movie credit");
             }
         }
@@ -320,16 +327,10 @@ public class MovieServiceImpl implements IMovieService {
             return;
         }
 
-        try {
-            personClient.addProfessionsToPersons(newProfessions);
-            log.info("Synced {} professions for movie",
-                    newProfessions.size());
-        } catch (Exception e) {
-            log.error("Failed to sync professions for movie :", e);
-            throw new BadRequestException(
-                    ErrorCodes.BAD_REQUEST,
-                    "Failed to sync professions for movie");
-        }
+        personClient.addProfessionsToPersons(newProfessions);
+        log.info("Synced {} professions for movie",
+                newProfessions.size());
+
     }
 
     private List<MovieCreditResponse> buildCreditResponses(
@@ -359,8 +360,8 @@ public class MovieServiceImpl implements IMovieService {
 
                     MovieCreditPersonResponse person = personsById.get(personId);
                     if (person == null) {
-                        throw new NotFoundException(
-                                ErrorCodes.PERSON_NOT_FOUND,
+                        throw new MovieException(
+                                ErrorCode.MOVIE_CREDIT_NOT_FOUND,
                                 "Person not found: " + personId);
                     }
 
@@ -422,8 +423,8 @@ public class MovieServiceImpl implements IMovieService {
         missingIds.removeAll(foundIds);
 
         if (!missingIds.isEmpty()) {
-            throw new NotFoundException(
-                    ErrorCodes.PERSON_NOT_FOUND,
+            throw new MovieException(
+                    ErrorCode.MOVIE_CREDIT_NOT_FOUND,
                     "Missing persons ");
         }
 

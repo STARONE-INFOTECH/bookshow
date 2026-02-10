@@ -19,16 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.starone.bookshow.movie.client.IPersonClient;
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.entity.MovieCredit;
+import com.starone.bookshow.movie.exception.MovieException;
 import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.IMovieCreditService;
 import com.starone.common.enums.Profession;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.MovieCreditResponse;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
 
 import io.jsonwebtoken.lang.Collections;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +47,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
         @Transactional(readOnly = true)
         public List<MovieCreditResponse> getCreditsByMovieId(UUID movieId) {
                 if (movieId == null) {
-                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "movie ID null");
+                        throw new MovieException(ErrorCode.INVALID_MOVIE_ID, "movie ID null");
                 }
                 // INFO: Start of a read operation that retrieves all credits for a movie
                 log.info("Fetching all credits for movie ID: {}", movieId);
@@ -139,7 +138,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                                 .orElseThrow(() -> {
                                         // WARN: Client requested a non-existent credit
                                         log.warn("Movie credit not found - Credit ID: {}", creditId);
-                                        return new NotFoundException(ErrorCodes.MOVIE_CREDIT_NOT_FOUND);
+                                        return new MovieException(ErrorCode.MOVIE_CREDIT_NOT_FOUND);
                                 });
 
                 // INFO: Successful retrieval — useful for audit and usage monitoring
@@ -166,7 +165,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 // Validate input early
                 if (orderedDtos == null || orderedDtos.isEmpty()) {
                         log.warn("Reorder credits requested with null or empty list for movie ID: {}", movieId);
-                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "Reorder list cannot be empty");
+                        throw new MovieException(ErrorCode.VALIDATION_422, "Reorder list cannot be empty");
                 }
 
                 // INFO: Start of a critical ordering operation — highly auditable
@@ -178,7 +177,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
 
                 if (credits.isEmpty()) {
                         log.warn("No existing credits found for movie ID: {} during reorder attempt", movieId);
-                        throw new BadRequestException(ErrorCodes.MOVIE_CREDIT_NOT_FOUND, "No credits exist to reorder");
+                        throw new MovieException(ErrorCode.MOVIE_CREDIT_NOT_FOUND, "No credits exist to reorder");
                 }
 
                 // INFO: Log current vs requested count for validation
@@ -189,7 +188,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 if (orderedDtos.size() != credits.size()) {
                         log.warn("Reorder list size mismatch for movie ID: {} - expected {}, got {}",
                                         movieId, credits.size(), orderedDtos.size());
-                        throw new BadRequestException(ErrorCodes.VALIDATION_400,
+                        throw new MovieException(ErrorCode.VALIDATION_422,
                                         "Reorder list must contain all existing credits with the same size");
                 }
 
@@ -203,7 +202,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                                         .orElseThrow(() -> {
                                                 log.warn("Invalid credit in reorder list for movie ID: {} - Person ID: {}, Role: {}",
                                                                 movieId, dto.getPersonId(), dto.getProfessions());
-                                                return new BadRequestException(ErrorCodes.VALIDATION_400,
+                                                return new MovieException(ErrorCode.VALIDATION_422,
                                                                 "Invalid credit in reorder list: no matching person and role");
                                         });
 
@@ -260,7 +259,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 MovieCreditPersonResponse movieCredit = personClient.getPersonById(credit.getPersonId());
                 if (movieCredit == null) {
                         log.warn("Person is null");
-                        throw new BadRequestException(ErrorCodes.VALIDATION_400, "Please, provide valid person");
+                        throw new MovieException(ErrorCode.VALIDATION_422, "Please, provide valid person");
                 }
                 return new MovieCreditResponse(
                                 credit.getId(),
@@ -292,7 +291,7 @@ public class MovieCreditServiceImpl implements IMovieCreditService {
                 if (persons.size() != personIds.size()) {
                         log.warn("Person list size mismatch - expected {}, got {}",
                                         credits.size(), persons.size());
-                        throw new BadRequestException(ErrorCodes.VALIDATION_400,
+                        throw new MovieException(ErrorCode.VALIDATION_422,
                                         "Person list must contain all existing credits with the same size");
                 }
                 Map<UUID, MovieCreditPersonResponse> personMap = persons.stream()

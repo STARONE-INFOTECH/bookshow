@@ -8,9 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
-import com.starone.common.response.record.PersonResponse;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
+import com.starone.springcommon.response.record.PersonResponse;
 
 public interface IPersonService {
 

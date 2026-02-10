@@ -8,7 +8,7 @@ import com.starone.bookshow.show.dto.ShowRequestDto;
 import com.starone.bookshow.show.entity.Show;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.ShowResponse;
+import com.starone.springcommon.response.record.ShowResponse;
 
 @Mapper(
     componentModel = "spring",
@@ -21,6 +21,7 @@ public interface IShowMapper extends BaseMapper<Show, ShowRequestDto, ShowReques
     @Mapping(target = "totalSeats", ignore = true)
     @Mapping(target = "availableSeats", ignore = true)
     @Mapping(target = "active", constant = "true")
+     
     @Override
     Show toEntity(ShowRequestDto createDto);
 
@@ -31,6 +32,7 @@ public interface IShowMapper extends BaseMapper<Show, ShowRequestDto, ShowReques
     @Mapping(target = "theaterId", ignore = true)
     @Mapping(target = "theaterName", ignore = true)
     @Mapping(target = "theaterCity", ignore = true)
+
     @Override
     ShowResponse toResponseDto(Show entity);
 

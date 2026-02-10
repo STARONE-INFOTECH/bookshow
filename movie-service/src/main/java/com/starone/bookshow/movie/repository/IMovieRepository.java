@@ -43,5 +43,5 @@ public interface IMovieRepository extends JpaRepository<Movie, UUID> {
      * =====================================================================
      */
     // renamed to avoid conflict with built-in findById
-    Optional<MovieShowProjection> findByMovieId(UUID movieId);
+    Optional<MovieShowProjection> findMovieById(UUID movieId);
 }

@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.service.IMovieService;
-import com.starone.common.request.ApiResponses;
-import com.starone.common.response.record.ApiResponse;
-import com.starone.common.response.record.MovieResponse;
-import com.starone.common.response.record.MovieShowResponse;
+import com.starone.springcommon.response.record.ApiResponse;
+import com.starone.springcommon.response.record.MovieResponse;
+import com.starone.springcommon.response.record.MovieShowResponse;
+import com.starone.springcommon.response.util.ApiResponses;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,16 +33,15 @@ import lombok.RequiredArgsConstructor;
 public class MovieController {
     private final IMovieService movieService;
 
+    /*
+     * ======================================================================
+     * - ADMIN ENDPOINTS -
+     * ======================================================================
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MovieResponse> create(@Valid @RequestBody MovieRequestDto requestDto) {
         MovieResponse response = movieService.create(requestDto);
-        return ApiResponses.success(response);
-    }
-
-    @GetMapping("/{id}")
-    public ApiResponse<MovieResponse> getById(@PathVariable("id") UUID id) {
-        MovieResponse response = movieService.getById(id);
         return ApiResponses.success(response);
     }
 
@@ -63,6 +62,23 @@ public class MovieController {
     @PutMapping("/{id}/activate")
     public ApiResponse<MovieResponse> activate(@PathVariable("id") UUID id) {
         MovieResponse response = movieService.activate(id);
+        return ApiResponses.success(response);
+    }
+
+    @GetMapping("/show/{movieId}")
+    public ApiResponse<MovieShowResponse> getMovieById(@PathVariable("movieId") UUID movieId) {
+        return ApiResponses.success(movieService.getByMovieId(movieId));
+    }
+
+    /*
+     * ======================================================================
+     * - PUBLIC ENDPOINTS -
+     * ======================================================================
+     */
+
+    @GetMapping("/{id}")
+    public ApiResponse<MovieResponse> getById(@PathVariable("id") UUID id) {
+        MovieResponse response = movieService.getById(id);
         return ApiResponses.success(response);
     }
 
@@ -109,16 +125,6 @@ public class MovieController {
             @PageableDefault(size = 20) Pageable pageable) {
         Page<MovieResponse> page = movieService.filterByLanguage(language, pageable);
         return ApiResponses.success(page);
-    }
-
-    /*
-     * ======================================================================
-     * - Internal Service-to-Service usable endpoints by using Feign client -
-     * ======================================================================
-     */
-    @GetMapping("/show/{movieId}")
-    public ApiResponse<MovieShowResponse> getMovieById(@PathVariable("movieId") UUID movieId){
-        return ApiResponses.success(movieService.getByMovieId(movieId));
     }
 
 }

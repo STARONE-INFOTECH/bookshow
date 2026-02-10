@@ -9,15 +9,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.show.entity.ShowSeat;
+import com.starone.bookshow.show.exception.ShowException;
 import com.starone.bookshow.show.mapper.IShowSeatMapper;
 import com.starone.bookshow.show.repository.IShowRepository;
 import com.starone.bookshow.show.repository.IShowSeatRepository;
 import com.starone.bookshow.show.service.IShowSeatService;
 import com.starone.common.enums.SeatStatus;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.ConflictException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.ShowSeatResponse;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.ShowSeatResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,13 +41,13 @@ public class ShowSeatServiceImpl implements IShowSeatService {
         int lockedCount = showSeatRepository.lockSeats(showId, seatNumbers, now, expiry, userId);
 
         if (lockedCount == 0) {
-            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "No seats were available to lock");
+            throw new ShowException(ErrorCode.SEAT_NOT_AVAILABLE, "No seats were available to lock");
         }
 
         if (lockedCount < seatNumbers.size()) {
             // Partial success - rollback partial locks
             releaseSeats(showId, seatNumbers);
-            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "Only some seats were available. Try again.");
+            throw new ShowException(ErrorCode.SEAT_NOT_AVAILABLE, "Only some seats were available. Try again.");
         }
 
         return showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers)
@@ -78,12 +77,12 @@ public class ShowSeatServiceImpl implements IShowSeatService {
         List<ShowSeat> seats = showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers);
 
         if (seats.size() != seatNumbers.size()) {
-            throw new NotFoundException(ErrorCodes.NOT_FOUND, "Some seats not found");
+            throw new ShowException(ErrorCode.SEAT_NOT_AVAILABLE, "Some seats not found");
         }
 
         seats.forEach(seat -> {
             if (seat.getStatus() != SeatStatus.LOCKED) {
-                throw new ConflictException(ErrorCodes.SEAT_NOT_LOCKED, "Seat " + seat.getSeatNumber() + " is not locked");
+                throw new ShowException(ErrorCode.SEAT_NOT_LOCKED, "Seat " + seat.getSeatNumber() + " is not locked");
             }
             seat.setStatus(SeatStatus.BOOKED);
             seat.setBookingId(bookingId);
@@ -152,6 +151,6 @@ public class ShowSeatServiceImpl implements IShowSeatService {
 
     private void validateShowExists(UUID showId) {
         showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND, "Show not found"));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND, "Show not found"));
     }
 }

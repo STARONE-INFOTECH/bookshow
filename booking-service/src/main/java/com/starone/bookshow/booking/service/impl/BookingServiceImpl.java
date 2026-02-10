@@ -14,22 +14,21 @@ import com.starone.bookshow.booking.client.IShowClient;
 import com.starone.bookshow.booking.client.IShowSeatClient;
 import com.starone.bookshow.booking.dto.BookingCancellationRequestDto;
 import com.starone.bookshow.booking.dto.BookingRequestDto;
-import com.starone.bookshow.booking.dto.BookingResponseDto;
+import com.starone.bookshow.booking.dto.BookingResponse;
 import com.starone.bookshow.booking.dto.PaymentConfirmRequestDto;
 import com.starone.bookshow.booking.entity.Booking;
 import com.starone.bookshow.booking.entity.BookingSeat;
+import com.starone.bookshow.booking.exception.BookingException;
 import com.starone.bookshow.booking.mapper.IBookingMapper;
 import com.starone.bookshow.booking.mapper.IBookingSeatMapper;
 import com.starone.bookshow.booking.repository.IBookingRepository;
 import com.starone.bookshow.booking.repository.IBookingSeatRepository;
 import com.starone.bookshow.booking.service.IBookingService;
 import com.starone.bookshow.booking.util.TicketGenerator;
-import com.starone.common.dto.ShowResponseDto;
-import com.starone.common.dto.ShowSeatResponseDto;
 import com.starone.common.enums.BookingStatus;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.ConflictException;
-import com.starone.common.exceptions.NotFoundException;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.ShowResponse;
+import com.starone.springcommon.response.record.ShowSeatResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -49,17 +48,17 @@ public class BookingServiceImpl implements IBookingService {
     private final TicketGenerator ticketGenerator;
 
     @Override
-    public BookingResponseDto createBooking(UUID userId, BookingRequestDto requestDto) {
+    public BookingResponse createBooking(UUID userId, BookingRequestDto requestDto) {
         // Validate show exists and get details
-        ShowResponseDto show = showClient.getShowById(requestDto.getShowId());
+        ShowResponse show = showClient.getShowById(requestDto.getShowId());
 
         // Lock seats
-        List<ShowSeatResponseDto> lockedSeats = showSeatClient.lockSeats(
+        List<ShowSeatResponse> lockedSeats = showSeatClient.lockSeats(
                 requestDto.getShowId(), requestDto.getSeatNumbers(), userId);
 
         // Calculate amount (from locked seats prices)
         double totalAmount = lockedSeats.stream()
-                .mapToDouble(ShowSeatResponseDto::getPrice)
+                .mapToDouble(ShowSeatResponse::price)
                 .sum();
 
         // Create booking
@@ -73,14 +72,14 @@ public class BookingServiceImpl implements IBookingService {
         booking.setBookingReference(generateBookingReference());
 
         // Create BookingSeat entries
-        for (ShowSeatResponseDto lockedSeat : lockedSeats) {
+        for (ShowSeatResponse lockedSeat : lockedSeats) {
             BookingSeat bs = new BookingSeat();
             bs.setBooking(booking);
-            bs.setShowSeatId(lockedSeat.getId());  
-            bs.setSeatNumber(lockedSeat.getSeatNumber());
-            bs.setSeatType(lockedSeat.getSeatType());
-            bs.setPriceCategory(lockedSeat.getPriceCategory());
-            bs.setSeatPrice(lockedSeat.getPrice());
+            bs.setShowSeatId(lockedSeat.id());  
+            bs.setSeatNumber(lockedSeat.seatNumber());
+            bs.setSeatType(lockedSeat.seatType());
+            bs.setPriceCategory(lockedSeat.priceCategory());
+            bs.setSeatPrice(lockedSeat.price());
             booking.getBookedSeats().add(bs);
         }
 
@@ -90,12 +89,12 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     @Override
-    public BookingResponseDto confirmPayment(UUID bookingId, PaymentConfirmRequestDto paymentDto) {
+    public BookingResponse confirmPayment(UUID bookingId, PaymentConfirmRequestDto paymentDto) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new BookingException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new ConflictException(ErrorCodes.CONFLICT, "Booking not pending");
+            throw new BookingException(ErrorCode.BOOKING_NOT_PENDING, "Booking not pending");
         }
 
         booking.setStatus(BookingStatus.CONFIRMED);
@@ -107,14 +106,14 @@ public class BookingServiceImpl implements IBookingService {
 
         booking = bookingRepository.save(booking);
 
-        ShowResponseDto show = showClient.getShowById(booking.getShowId());
+        ShowResponse show = showClient.getShowById(booking.getShowId());
         return enrichBookingResponse(booking, show);
     }
 
     @Override
     public void handlePaymentFailure(UUID bookingId, String reason) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new BookingException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (booking.getStatus() == BookingStatus.PENDING) {
             booking.setStatus(BookingStatus.FAILED);
@@ -129,9 +128,9 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     @Override
-    public BookingResponseDto cancelBooking(UUID bookingId, BookingCancellationRequestDto requestDto) {
+    public BookingResponse cancelBooking(UUID bookingId, BookingCancellationRequestDto requestDto) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new BookingException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             // Refund logic via payment-service
@@ -146,43 +145,43 @@ public class BookingServiceImpl implements IBookingService {
                 .toList();
         showSeatClient.releaseSeats(booking.getShowId(), seatNumbers);
 
-        ShowResponseDto show = showClient.getShowById(booking.getShowId());
+        ShowResponse show = showClient.getShowById(booking.getShowId());
         return enrichBookingResponse(booking, show);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponseDto getBookingById(UUID bookingId) {
+    public BookingResponse getBookingById(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
-        ShowResponseDto show = showClient.getShowById(booking.getShowId());
+                .orElseThrow(() -> new BookingException(ErrorCode.BOOKING_NOT_FOUND));
+        ShowResponse show = showClient.getShowById(booking.getShowId());
         return enrichBookingResponse(booking, show);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BookingResponseDto> getBookingsByUser(UUID userId, Pageable pageable) {
+    public Page<BookingResponse> getBookingsByUser(UUID userId, Pageable pageable) {
         Page<Booking> page = bookingRepository.findByUserId(userId, pageable);
         return page.map(booking -> {
-            ShowResponseDto show = showClient.getShowById(booking.getShowId());
+            ShowResponse show = showClient.getShowById(booking.getShowId());
             return enrichBookingResponse(booking, show);
         });
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BookingResponseDto> getBookingsByShow(UUID showId, Pageable pageable) {
+    public Page<BookingResponse> getBookingsByShow(UUID showId, Pageable pageable) {
         Page<Booking> page = bookingRepository.findByShowId(showId, pageable);
-        ShowResponseDto show = showClient.getShowById(showId);
+        ShowResponse show = showClient.getShowById(showId);
         return page.map(booking -> enrichBookingResponse(booking, show));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponseDto getBookingByReference(String bookingReference) {
+    public BookingResponse getBookingByReference(String bookingReference) {
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
-        ShowResponseDto show = showClient.getShowById(booking.getShowId());
+                .orElseThrow(() -> new BookingException(ErrorCode.BOOKING_NOT_FOUND));
+        ShowResponse show = showClient.getShowById(booking.getShowId());
         return enrichBookingResponse(booking, show);
     }
 
@@ -190,13 +189,13 @@ public class BookingServiceImpl implements IBookingService {
         return "BKN-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    private BookingResponseDto enrichBookingResponse(Booking booking, ShowResponseDto show) {
-        BookingResponseDto dto = bookingMapper.toResponseDto(booking);
-        dto.setMovieTitle(show.getMovieTitle());
-        dto.setTheaterName(show.getTheaterName());
-        dto.setScreenName(show.getScreenName());
-        dto.setShowStartTime(show.getShowStartTime());
-        dto.setShowType(show.getShowType());
+    private BookingResponse enrichBookingResponse(Booking booking, ShowResponse show) {
+        BookingResponse dto = bookingMapper.toResponseDto(booking);
+        dto.setMovieTitle(show.movieTitle());
+        dto.setTheaterName(show.theaterName());
+        dto.setScreenName(show.screenName());
+        dto.setShowStartTime(show.showStartTime());
+        dto.setShowType(show.showType());
         return dto;
     }
 }

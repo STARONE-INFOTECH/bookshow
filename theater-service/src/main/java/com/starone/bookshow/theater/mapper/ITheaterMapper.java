@@ -8,7 +8,7 @@ import com.starone.bookshow.theater.dto.TheaterRequestDto;
 import com.starone.bookshow.theater.entity.Theater;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.TheaterResponse;
+import com.starone.springcommon.response.record.TheaterResponse;
 
 @Mapper(
     componentModel = "spring",

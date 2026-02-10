@@ -22,9 +22,18 @@ public interface IScreenRepository extends JpaRepository<Screen, UUID> {
      * ====================================================================
      */
     @Query("""
-            SELECT t.id AS theaterId,t.name AS theaterName,t.city AS city,s.id AS screenId,
-            s.name AS screenName FROM Screen s JOIN s.theater t
-            WHERE s.id = :screenId AND s.active = true AND t.active = true
+            SELECT 
+                t.id AS theaterId,
+                t.name AS theaterName,
+                t.city AS city,
+                s.id AS screenId,
+                s.name AS screenName 
+            FROM Screen s 
+            JOIN s.theater t
+            WHERE t.id = :theaterId 
+            AND s.id = :screenId 
+            AND s.active = true 
+            AND t.active = true
             """)
-    Optional<TheaterScreenShowProjection> findTheaterAndScreenByScreenId(UUID screenId);
+    Optional<TheaterScreenShowProjection> findTheaterAndScreenByScreenId(UUID theaterId, UUID screenId);
 }

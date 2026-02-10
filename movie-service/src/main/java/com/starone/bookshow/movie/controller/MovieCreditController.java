@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.service.IMovieCreditService;
-import com.starone.common.request.ApiResponses;
-import com.starone.common.response.record.ApiResponse;
-import com.starone.common.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.ApiResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.util.ApiResponses;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

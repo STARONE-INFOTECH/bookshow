@@ -5,7 +5,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import com.starone.bookshow.booking.dto.BookingRequestDto;
-import com.starone.bookshow.booking.dto.BookingResponseDto;
+import com.starone.bookshow.booking.dto.BookingResponse;
 import com.starone.bookshow.booking.entity.Booking;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
@@ -19,7 +19,7 @@ public interface IBookingMapper extends BaseMapper<
         Booking,                     // Entity
         BookingRequestDto,           // Create & Update (same)
         BookingRequestDto,
-        BookingResponseDto           // Response
+        BookingResponse           // Response
     > {
 
     // Create: ignore generated/auto fields
@@ -43,7 +43,7 @@ public interface IBookingMapper extends BaseMapper<
     @Mapping(target = "showStartTime", ignore = true)
     @Mapping(target = "showType", ignore = true)
     @Override
-    BookingResponseDto toResponseDto(Booking entity);
+    BookingResponse toResponseDto(Booking entity);
 
     // Partial update (for internal status/payment updates if needed)
     @Override

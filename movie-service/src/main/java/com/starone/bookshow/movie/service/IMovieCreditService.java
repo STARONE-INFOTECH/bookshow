@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.common.enums.Profession;
-import com.starone.common.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
 
 public interface IMovieCreditService {
   

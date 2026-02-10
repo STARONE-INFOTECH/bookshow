@@ -4,7 +4,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -18,18 +17,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.entity.Person;
+import com.starone.bookshow.person.exception.PersonException;
 import com.starone.bookshow.person.mapper.IPersonMapper;
 import com.starone.bookshow.person.projection.PersonMovieCreditProjection;
 import com.starone.bookshow.person.repository.IPersonRepository;
 import com.starone.bookshow.person.service.IPersonService;
 import com.starone.common.enums.Profession;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.ConflictException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
-import com.starone.common.response.record.PersonResponse;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
+import com.starone.springcommon.response.record.PersonResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -50,8 +47,8 @@ public class PersonServiceImpl implements IPersonService {
         // check person is already avaiable
         if (personRepository.existsByNameIgnoreCase(personName)) {
             log.warn("Attempt to create duplicate person with name: {}", personName);
-            throw new ConflictException(
-                    ErrorCodes.PERSON_ALREADY_EXISTS,
+            throw new PersonException(
+                    ErrorCode.PERSON_ALREADY_EXISTS,
                     "Person with name '" + personName + "' already exists");
         }
         log.info("Creating new person with name :{}", personName);
@@ -74,7 +71,7 @@ public class PersonServiceImpl implements IPersonService {
     @Override
     public List<MovieCreditPersonResponse> getAllByIds(Set<UUID> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Invalid person id reference");
+            throw new PersonException(ErrorCode.INVALID_PERSON_IDS);
         }
         List<PersonMovieCreditProjection> persons = personRepository.findAllByIdIn(ids);
         if (persons.size() != ids.size()) {
@@ -84,7 +81,9 @@ public class PersonServiceImpl implements IPersonService {
             Set<UUID> missingIds = new HashSet<>(ids);
             missingIds.removeAll(foundIds);
 
-            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Persons not found: " + missingIds);
+            throw new PersonException(
+                    ErrorCode.PERSON_NOT_FOUND,
+                    "Persons not found with Ids: [" + missingIds + "]");
         }
         return persons.stream()
                 .map(person -> {
@@ -100,20 +99,22 @@ public class PersonServiceImpl implements IPersonService {
     @Override
     public MovieCreditPersonResponse getPersonById(UUID id) {
         if (id == null) {
-            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Person Id is required");
+            throw new PersonException(ErrorCode.INVALID_PERSON_ID);
         }
         return personRepository.findPersonById(id).map(person -> {
             return new MovieCreditPersonResponse(person.getId(),
                     person.getName(),
                     person.getProfileImg(),
                     person.getProfessions());
-        }).orElseThrow(() -> new NotFoundException(ErrorCodes.PERSON_NOT_FOUND, "Person not found"));
+        }).orElseThrow(() -> new PersonException(
+                ErrorCode.PERSON_NOT_FOUND,
+                "Person not found with id :" + id));
     }
 
     @Override
     public void addProfessionsToPersons(List<PersonProfessionAddition> bulkUpdates) {
         if (bulkUpdates == null || bulkUpdates.isEmpty()) {
-            throw new BadRequestException(ErrorCodes.BAD_REQUEST,
+            throw new PersonException(ErrorCode.INVALID_PERSON_PROFESSIONS,
                     "Person profession(s) must not be null or empty");
         }
 
@@ -132,8 +133,8 @@ public class PersonServiceImpl implements IPersonService {
                 .filter(id -> !personMap.containsKey(id))
                 .collect(Collectors.toSet());
         if (!missingIds.isEmpty()) {
-            throw new NotFoundException(ErrorCodes.PERSON_NOT_FOUND,
-                    "Person(s) not found " + missingIds);
+            throw new PersonException(ErrorCode.PERSON_NOT_FOUND,
+                    "Person(s) not found with ids [" + missingIds + "]");
         }
 
         // Apply updates
@@ -160,8 +161,8 @@ public class PersonServiceImpl implements IPersonService {
                         () -> {
                             log.warn("Person not found for ID: {}", id);
 
-                            return new NotFoundException(
-                                    ErrorCodes.PERSON_NOT_FOUND,
+                            return new PersonException(
+                                    ErrorCode.PERSON_NOT_FOUND,
                                     "Person not found with id: " + id);
 
                         });
@@ -179,8 +180,8 @@ public class PersonServiceImpl implements IPersonService {
                 .orElseThrow(
                         () -> {
                             log.warn("Person not found for update - ID: {}", id);
-                            return new NotFoundException(
-                                    ErrorCodes.PERSON_NOT_FOUND,
+                            return new PersonException(
+                                    ErrorCode.PERSON_NOT_FOUND,
                                     "Person not found with id: " + id);
                         });
         String oldName = person.getName();
@@ -192,8 +193,8 @@ public class PersonServiceImpl implements IPersonService {
 
                 log.warn("Update failed - name '{}' already exists (person ID: {})", newName, id);
 
-                throw new ConflictException(
-                        ErrorCodes.PERSON_ALREADY_EXISTS,
+                throw new PersonException(
+                        ErrorCode.PERSON_ALREADY_EXISTS,
                         "Person with name '" + newName + "' already exists");
             }
             log.info("Changing person name from '{}' to '{}' (ID: {})", oldName, newName, id);
@@ -222,9 +223,9 @@ public class PersonServiceImpl implements IPersonService {
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("Cannot deactivate - person not found with ID: {}", id);
-                    return new NotFoundException(
-                            ErrorCodes.PERSON_NOT_FOUND,
-                            "Person not found");
+                    return new PersonException(
+                            ErrorCode.PERSON_NOT_FOUND,
+                            "Person not found with id :" + id);
                 });
 
         // If the person is already inactive
@@ -252,9 +253,9 @@ public class PersonServiceImpl implements IPersonService {
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("Cannot activate - person not found with ID: {}", id);
-                    return new NotFoundException(
-                            ErrorCodes.PERSON_NOT_FOUND,
-                            "Person not found");
+                    return new PersonException(
+                            ErrorCode.PERSON_NOT_FOUND,
+                            "Person not found with id :" + id);
                 });
         // Handle case where person is already active (idempotent operation)
         if (person.isActive()) {

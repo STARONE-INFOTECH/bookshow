@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.starone.common.dto.ShowSeatResponseDto;
+import com.starone.springcommon.response.record.ShowSeatResponse;
 
 @FeignClient(name = "show-service", url = "${show.service.url:http://localhost:8084}")
 public interface IShowSeatClient {
     @PostMapping("/api/v1/shows/{showId}/seats/lock")
-    List<ShowSeatResponseDto> lockSeats(
+    List<ShowSeatResponse> lockSeats(
             @PathVariable UUID showId,
             @RequestBody List<String> seatNumbers,
             @RequestParam UUID userId);

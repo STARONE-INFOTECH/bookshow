@@ -21,7 +21,7 @@ import com.starone.bookshow.movie.mapper.IMovieCreditMapper;
 import com.starone.bookshow.movie.repository.IMovieCreditRepository;
 import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.impl.MovieCreditServiceImpl;
-import com.starone.common.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
 
 @ExtendWith(MockitoExtension.class)
 class MovieCreditServiceTest {

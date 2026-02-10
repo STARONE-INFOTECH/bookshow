@@ -15,8 +15,8 @@ import com.starone.common.enums.Genre;
 import com.starone.common.enums.Language;
 import com.starone.common.enums.Profession;
 import com.starone.common.enums.Rating;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.MovieResponse;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.MovieResponse;
 
 public class MovieCreateTestDataFactory {
     private MovieCreateTestDataFactory() {

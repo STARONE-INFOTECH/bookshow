@@ -10,7 +10,7 @@ import java.util.UUID;
 
 import com.starone.bookshow.person.entity.Person;
 import com.starone.common.enums.Profession;
-import com.starone.common.response.record.PersonProfessionAddition;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
 
 public class TestDataFactory {
     public static List<PersonProfessionAddition> createBulkUpdates(int count) {

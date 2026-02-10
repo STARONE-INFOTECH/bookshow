@@ -23,11 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.service.IPersonService;
-import com.starone.common.request.ApiResponses;
-import com.starone.common.response.record.ApiResponse;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
-import com.starone.common.response.record.PersonResponse;
+import com.starone.springcommon.response.record.ApiResponse;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
+import com.starone.springcommon.response.record.PersonResponse;
+import com.starone.springcommon.response.util.ApiResponses;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,13 @@ public class PersonController {
     private static final Logger log = LoggerFactory.getLogger(PersonController.class);
     private final IPersonService personService;
 
-    @PostMapping
+     /*
+     * ======================================================================
+     * - ADMIN ENDPOINTS -
+     * ======================================================================
+     */
+
+     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PersonResponse> create(@Valid @RequestBody PersonRequestDto requestDto) {
         log.info("Received DTO - pAddress: {}, cAddress: {}", requestDto.getPAddress(), requestDto.getCAddress());
@@ -54,25 +60,6 @@ public class PersonController {
         personService.addProfessionsToPersons(bulkUpdateDto);
         return ApiResponses.success(null);
     }
-
-    @GetMapping("/{id}")
-    public ApiResponse<PersonResponse> getById(@PathVariable("id") UUID id) {
-        PersonResponse response = personService.getById(id);
-        return ApiResponses.success(response);
-    }
-
-    @GetMapping("/credit-info/{id}")
-    public ApiResponse<MovieCreditPersonResponse> getPersonById(@PathVariable("id") UUID id) {
-        MovieCreditPersonResponse existingPerson = personService.getPersonById(id);
-        return ApiResponses.success(existingPerson);
-    }
-
-    @PostMapping("/by-ids")
-    public ApiResponse<List<MovieCreditPersonResponse>> getAllByIds(@RequestBody Set<UUID> ids) {
-        List<MovieCreditPersonResponse> existingPersons = personService.getAllByIds(ids);
-        return ApiResponses.success(existingPersons);
-    }
-
     @PatchMapping("/{id}")
     public ApiResponse<PersonResponse> update(
             @PathVariable("id") UUID id,
@@ -91,6 +78,30 @@ public class PersonController {
     public ApiResponse<PersonResponse> activate(@PathVariable("id") UUID id) {
         PersonResponse response = personService.activate(id);
         return ApiResponses.success(response);
+    }   
+     /*
+     * ======================================================================
+     * - PUBLIC ENDPOINTS -
+     * ======================================================================
+     */
+    
+
+    @GetMapping("/{id}")
+    public ApiResponse<PersonResponse> getById(@PathVariable("id") UUID id) {
+        PersonResponse response = personService.getById(id);
+        return ApiResponses.success(response);
+    }
+
+    @GetMapping("/credit-info/{id}")
+    public ApiResponse<MovieCreditPersonResponse> getPersonById(@PathVariable("id") UUID id) {
+        MovieCreditPersonResponse existingPerson = personService.getPersonById(id);
+        return ApiResponses.success(existingPerson);
+    }
+
+    @PostMapping("/by-ids")
+    public ApiResponse<List<MovieCreditPersonResponse>> getAllByIds(@RequestBody Set<UUID> ids) {
+        List<MovieCreditPersonResponse> existingPersons = personService.getAllByIds(ids);
+        return ApiResponses.success(existingPersons);
     }
 
     @GetMapping("/search")
@@ -114,28 +125,5 @@ public class PersonController {
         Page<PersonResponse> page = personService.getAll(pageable);
         return ApiResponses.success(page);
     }
-
-    /*
-     * =====================================================================
-     * ------ Internal Service usable endpoints by using Feign client ------
-     * =====================================================================
-     */
-
-    @PostMapping("/internal/professions")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void addProfessionsToPersonsInternal(@Valid @RequestBody List<PersonProfessionAddition> personProfessions) {
-        log.info("Received DTO with :{} no of ids", personProfessions.size());
-        personService.addProfessionsToPersons(personProfessions);
-        log.info("New profession(s) added successfully with :{} no. of person ids", personProfessions.size());
-    }
-
-    @PostMapping("/internal/by-ids")
-    public List<MovieCreditPersonResponse> getAllByIdsInternal(@RequestBody Set<UUID> ids) {
-        return personService.getAllByIds(ids);
-    }
-
-    @GetMapping("/internal/credit-info/{id}")
-    public MovieCreditPersonResponse getPersonByIdInternal(@PathVariable("id") UUID id) {
-        return personService.getPersonById(id);
-    }
+    
 }

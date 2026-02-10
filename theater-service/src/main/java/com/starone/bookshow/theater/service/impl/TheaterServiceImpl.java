@@ -1,28 +1,27 @@
 package com.starone.bookshow.theater.service.impl;
 
-import java.util.List;
+import static com.starone.bookshow.theater.repository.TheaterSpecifications.*;
+
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
 import com.starone.bookshow.theater.entity.Theater;
+import com.starone.bookshow.theater.exception.TheaterException;
 import com.starone.bookshow.theater.mapper.IScreenMapper;
 import com.starone.bookshow.theater.mapper.ITheaterMapper;
 import com.starone.bookshow.theater.repository.ITheaterRepository;
 import com.starone.bookshow.theater.service.ITheaterService;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.ConflictException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.ScreenResponse;
-import com.starone.common.response.record.TheaterResponse;
-import com.starone.common.response.record.TheaterScreenShowResponse;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.ScreenResponse;
+import com.starone.springcommon.response.record.TheaterResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,15 +36,8 @@ public class TheaterServiceImpl implements ITheaterService {
 
     @Override
     public TheaterResponse create(TheaterRequestDto requestDto) {
-        if (requestDto == null) {
-            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Theater dto can not be null.");
-        }
-        if (requestDto.getName() == null || requestDto.getName().isEmpty() || requestDto.getCity() == null
-                || requestDto.getCity().isEmpty()) {
-            throw new BadRequestException(ErrorCodes.BAD_REQUEST, "Theater name and city can not be null or empty.");
-        }
         if (theaterRepository.existsByNameAndCityIgnoreCase(requestDto.getName(), requestDto.getCity())) {
-            throw new ConflictException(ErrorCodes.THEATER_ALREADY_EXISTS,
+            throw new TheaterException(ErrorCode.THEATER_ALREADY_EXISTS,
                     "Theater with this name already exists in the city");
         }
 
@@ -58,21 +50,21 @@ public class TheaterServiceImpl implements ITheaterService {
     @Transactional(readOnly = true)
     public TheaterResponse getById(UUID id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new TheaterException(ErrorCode.THEATER_NOT_FOUND));
         return enrichResponse(theater);
     }
 
     @Override
     public TheaterResponse update(UUID id, TheaterRequestDto requestDto) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new TheaterException(ErrorCode.THEATER_NOT_FOUND));
 
         // Check uniqueness if name or city changing
         if ((requestDto.getName() != null && !requestDto.getName().equalsIgnoreCase(theater.getName())) ||
                 (requestDto.getCity() != null && !requestDto.getCity().equalsIgnoreCase(theater.getCity()))) {
 
             if (theaterRepository.existsByNameAndCityIgnoreCase(requestDto.getName(), requestDto.getCity())) {
-                throw new ConflictException(ErrorCodes.THEATER_ALREADY_EXISTS,
+                throw new TheaterException(ErrorCode.THEATER_ALREADY_EXISTS,
                         "Theater with this name already exists in the city");
             }
         }
@@ -85,7 +77,7 @@ public class TheaterServiceImpl implements ITheaterService {
     @Override
     public TheaterResponse deactivate(UUID id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new TheaterException(ErrorCode.THEATER_NOT_FOUND));
         theater.setActive(false);
         theater = theaterRepository.save(theater);
         return enrichResponse(theater);
@@ -94,34 +86,20 @@ public class TheaterServiceImpl implements ITheaterService {
     @Override
     public TheaterResponse activate(UUID id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new TheaterException(ErrorCode.THEATER_NOT_FOUND));
         theater.setActive(true);
         theater = theaterRepository.save(theater);
         return enrichResponse(theater);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<TheaterResponse> getAllActive(Pageable pageable) {
-        Page<Theater> page = theaterRepository.findByActiveTrue(pageable);
-        return page.map(this::enrichResponse);
+    public Page<TheaterResponse> search(String city, boolean active, Pageable pageable) {
+        Specification<Theater> spec = Specification.where(hasCity(city)).and(isActive(active));
+
+        return theaterRepository.findAll(spec,pageable).map(theaterMapper::toResponseDto);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<TheaterResponse> getByCity(String city, Pageable pageable) {
-        Page<Theater> page = theaterRepository.findByCityIgnoreCase(city, pageable);
-        return page.map(this::enrichResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<TheaterResponse> getByCityAndActive(String city, Pageable pageable) {
-        Page<Theater> page = theaterRepository.findByCityIgnoreCaseAndActiveTrue(city, pageable);
-        return page.map(this::enrichResponse);
-    }
-    
-     /*
+    /*
      * =====================================================================
      * ------------------ Helper to enrich with theater --------------------
      * =====================================================================
@@ -148,5 +126,4 @@ public class TheaterServiceImpl implements ITheaterService {
                 screens);
     }
 
-    
 }

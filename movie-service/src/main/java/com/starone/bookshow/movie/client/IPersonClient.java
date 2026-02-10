@@ -10,19 +10,23 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
+import com.starone.springcommon.config.feign.CommonFeignConfig;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
 
-@FeignClient(name = "bookshow-person-service", url = "${person.service.url:http://localhost:8081}")
+@FeignClient(
+    name = "bookshow-person-service", 
+    configuration = CommonFeignConfig.class,
+    url = "${person.service.url:http://localhost:8081}")
 public interface IPersonClient {
 
-    @PostMapping("/api/v1/persons/internal/by-ids")
+    @PostMapping("/api/v1/persons/by-ids")
     List<MovieCreditPersonResponse> getAllPersonByIds(@RequestBody Set<UUID> ids);
 
-    @GetMapping("/api/v1/persons/internal/credit-info/{id}")
+    @GetMapping("/api/v1/persons/credit-info/{id}")
     MovieCreditPersonResponse getPersonById(@PathVariable("id") UUID id);
 
-    @PostMapping("/api/v1/persons/internal/professions")
+    @PostMapping("/api/v1/persons/professions")
     void addProfessionsToPersons(@RequestBody List<PersonProfessionAddition> personProfessions);
 
 }

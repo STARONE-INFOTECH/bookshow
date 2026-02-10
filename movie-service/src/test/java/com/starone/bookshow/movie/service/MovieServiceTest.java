@@ -11,9 +11,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -25,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -40,6 +37,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +48,7 @@ import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.bookshow.movie.entity.MovieCredit;
+import com.starone.bookshow.movie.exception.MovieException;
 import com.starone.bookshow.movie.helper.MovieCreateTestDataFactory;
 import com.starone.bookshow.movie.helper.MovieGetTestDataFactory;
 import com.starone.bookshow.movie.helper.MovieUpdateTestDataFactory;
@@ -59,13 +58,10 @@ import com.starone.bookshow.movie.repository.IMovieRepository;
 import com.starone.bookshow.movie.service.impl.MovieServiceImpl;
 import com.starone.common.enums.Language;
 import com.starone.common.enums.Profession;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.BadRequestException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.MovieCreditResponse;
-import com.starone.common.response.record.MovieResponse;
-import com.starone.common.response.record.PersonProfessionAddition;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.MovieResponse;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
 
 @ExtendWith(MockitoExtension.class)
 class MovieServiceTest {
@@ -98,10 +94,10 @@ class MovieServiceTest {
             // Arrange (Given)
             MovieRequestDto movieDto = null;
             // + Act
-            BadRequestException ex = assertThrows(BadRequestException.class, () -> movieService.create(movieDto));
+            MovieException ex = assertThrows(MovieException.class, () -> movieService.create(movieDto));
 
             // Assert
-            assertEquals(ErrorCodes.BAD_REQUEST, ex.getErrorCode());
+            assertEquals(ErrorCode.VALIDATION_422, ex.getErrorCode());
             assertEquals("Movie requestDto is null", ex.getMessage());
 
             verifyNoInteractions(movieMapper, movieRepository);
@@ -114,7 +110,7 @@ class MovieServiceTest {
             MovieRequestDto movieDto = MovieCreateTestDataFactory.movieWithDuplicatePersonCredits();
 
             // Act + Assert
-            Exception ex = assertThrows(BadRequestException.class, () -> movieService.create(movieDto));
+            Exception ex = assertThrows(MovieException.class, () -> movieService.create(movieDto));
             assertEquals("Same person cannot be added multiple times as movie credit", ex.getMessage());
             verifyNoInteractions(movieMapper, movieRepository, creditMapper, personClient);
         }
@@ -124,7 +120,7 @@ class MovieServiceTest {
             // Arrange
             MovieRequestDto requestDto = MovieCreateTestDataFactory.movieWithNullPersonCredits();
             // Act +Assert
-            Exception ex = assertThrows(BadRequestException.class, () -> movieService.create(requestDto));
+            Exception ex = assertThrows(MovieException.class, () -> movieService.create(requestDto));
             assertEquals("PersonId cannot be null in movie credits", ex.getMessage());
             verifyNoInteractions(movieMapper, movieRepository, creditMapper, personClient);
         }

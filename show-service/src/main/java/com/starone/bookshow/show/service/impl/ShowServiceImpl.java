@@ -9,25 +9,24 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.starone.bookshow.show.client.IMovieClient;
+import com.starone.bookshow.show.client.MovieClient;
 import com.starone.bookshow.show.client.TheaterClient;
 import com.starone.bookshow.show.dto.ShowRequestDto;
 import com.starone.bookshow.show.entity.Show;
 import com.starone.bookshow.show.entity.ShowSeat;
+import com.starone.bookshow.show.exception.ShowException;
 import com.starone.bookshow.show.mapper.IShowMapper;
 import com.starone.bookshow.show.mapper.IShowSeatMapper;
 import com.starone.bookshow.show.repository.IShowRepository;
 import com.starone.bookshow.show.repository.IShowSeatRepository;
 import com.starone.bookshow.show.service.IShowService;
 import com.starone.common.enums.SeatStatus;
-import com.starone.common.error.ErrorCodes;
-import com.starone.common.exceptions.ConflictException;
-import com.starone.common.exceptions.NotFoundException;
-import com.starone.common.response.record.MovieShowResponse;
-import com.starone.common.response.record.ScreenResponse;
-import com.starone.common.response.record.ShowResponse;
-import com.starone.common.response.record.ShowSeatResponse;
-import com.starone.common.response.record.TheaterScreenShowResponse;
+import com.starone.springcommon.exceptions.errorcodes.ErrorCode;
+import com.starone.springcommon.response.record.MovieShowResponse;
+import com.starone.springcommon.response.record.ScreenResponse;
+import com.starone.springcommon.response.record.ShowResponse;
+import com.starone.springcommon.response.record.ShowSeatResponse;
+import com.starone.springcommon.response.record.TheaterScreenShowResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -40,21 +39,23 @@ public class ShowServiceImpl implements IShowService {
     private final IShowSeatRepository showSeatRepository;
     private final IShowMapper showMapper;
     private final IShowSeatMapper showSeatMapper;
-    private final IMovieClient movieClient; // Feign
+    private final MovieClient movieClient; // Feign
     private final TheaterClient theaterClient; // Feign for screen/theater
 
     @Override
-    public ShowResponse createShow(ShowRequestDto requestDto) {        
+    public ShowResponse createShow(ShowRequestDto requestDto) {
         // Validate movie and screen exist
         movieClient.getMovieById(requestDto.getMovieId());
-        ScreenResponse screen = theaterClient.getScreenById(requestDto.getScreenId());
+        ScreenResponse screen = theaterClient.getScreenById(requestDto.getTheaterId(), requestDto.getScreenId());
 
         // Check no overlapping show on same screen
         if (showRepository.existsByScreenIdAndShowStartTimeBetween(
                 requestDto.getScreenId(),
                 requestDto.getShowStartTime().minusMinutes(30), // buffer
                 requestDto.getShowStartTime().plusHours(4))) {
-            throw new ConflictException(ErrorCodes.SCREEN_SHOW_OVERLAP, "Screen has overlapping show");
+            throw new ShowException(
+                    ErrorCode.SHOW_SCREEN_CONFLICTS,
+                    "Screen has already occupied with other show");
         }
 
         Show show = showMapper.toEntity(requestDto);
@@ -74,14 +75,14 @@ public class ShowServiceImpl implements IShowService {
     @Transactional(readOnly = true)
     public ShowResponse getShowById(UUID showId) {
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND));
         return enrichShowResponse(show);
     }
 
     @Override
     public ShowResponse updateShow(UUID showId, ShowRequestDto requestDto) {
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND));
 
         showMapper.updateEntity(requestDto, show);
         if (requestDto.getShowStartTime() != null) {
@@ -95,7 +96,7 @@ public class ShowServiceImpl implements IShowService {
     @Override
     public void deactivateShow(UUID showId) {
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND));
         show.setActive(false);
         showRepository.save(show);
     }
@@ -103,7 +104,7 @@ public class ShowServiceImpl implements IShowService {
     @Override
     public void activateShow(UUID showId) {
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND));
         show.setActive(true);
         showRepository.save(show);
     }
@@ -120,7 +121,7 @@ public class ShowServiceImpl implements IShowService {
     @Override
     public List<ShowSeatResponse> lockSeats(UUID showId, List<String> seatNumbers, UUID userId) {
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new NotFoundException(ErrorCodes.NOT_FOUND));
+                .orElseThrow(() -> new ShowException(ErrorCode.SHOW_NOT_FOUND));
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiry = now.plusMinutes(10);
@@ -128,7 +129,7 @@ public class ShowServiceImpl implements IShowService {
         int lockedCount = showSeatRepository.lockSeats(showId, seatNumbers, now, expiry, userId);
 
         if (lockedCount != seatNumbers.size()) {
-            throw new ConflictException(ErrorCodes.SEAT_NOT_AVAILABLE, "Some seats are not available");
+            throw new ShowException(ErrorCode.SEAT_NOT_AVAILABLE, "Some seats are not available");
         }
 
         return showSeatRepository.findByShowIdAndSeatNumberIn(showId, seatNumbers)
@@ -160,9 +161,10 @@ public class ShowServiceImpl implements IShowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShowResponse> getShowsByScreenAndDate(UUID screenId, LocalDateTime date, Pageable pageable) {
+    public Page<ShowResponse> getShowsByScreenAndDate(UUID theaterId, UUID screenId, LocalDateTime date,
+            Pageable pageable) {
         // Validate screen exists
-        theaterClient.getScreenById(screenId);
+        theaterClient.getScreenById(theaterId, screenId);
 
         // Define date range: start of day to end of day
         LocalDateTime startOfDay = date.withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -194,7 +196,7 @@ public class ShowServiceImpl implements IShowService {
         return page.map(this::enrichShowResponse);
     }
 
-      /*
+    /*
      * =====================================================================
      * ------------------ Helper to enrich with Show -----------------------
      * =====================================================================
@@ -215,11 +217,11 @@ public class ShowServiceImpl implements IShowService {
 
     private ShowResponse enrichShowResponse(Show show) {
         MovieShowResponse movie = movieClient.getMovieById(show.getMovieId());
-        TheaterScreenShowResponse theater = theaterClient.getTheaterByScreenId(show.getScreenId());
-
+        TheaterScreenShowResponse theater = theaterClient.getTheaterByScreenId(show.getTheaterId(), show.getScreenId());
+        
         return new ShowResponse(
                 show.getId(),
-                show.getMovieId(),
+                movie.id(),
                 movie.title(),
                 movie.posterUrl(),
                 theater.screenId(),

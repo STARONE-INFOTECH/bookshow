@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.starone.bookshow.show.dto.ShowRequestDto;
 import com.starone.bookshow.show.service.IShowSeatService;
 import com.starone.bookshow.show.service.IShowService;
-import com.starone.common.request.ApiResponses;
-import com.starone.common.response.record.ApiResponse;
-import com.starone.common.response.record.ShowResponse;
-import com.starone.common.response.record.ShowSeatResponse;
+import com.starone.springcommon.response.record.ApiResponse;
+import com.starone.springcommon.response.record.ShowResponse;
+import com.starone.springcommon.response.record.ShowSeatResponse;
+import com.starone.springcommon.response.util.ApiResponses;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,12 +34,15 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/shows")
 @RequiredArgsConstructor
 public class ShowController {
-    
+
     private final IShowService showService;
     private final IShowSeatService showSeatService;
 
-    // ====================== ADMIN ENDPOINTS ======================
-
+    /*
+     * ======================================================================
+     * - ADMIN ENDPOINTS -
+     * ======================================================================
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ShowResponse> createShow(@Valid @RequestBody ShowRequestDto requestDto) {
@@ -67,8 +70,11 @@ public class ShowController {
         return ApiResponses.success(null);
     }
 
-    // ====================== PUBLIC ENDPOINTS ======================
-
+    /*
+     * ======================================================================
+     * - PUBLIC ENDPOINTS -
+     * ======================================================================
+     */
     @GetMapping("/{showId}")
     public ApiResponse<ShowResponse> getShowById(@PathVariable UUID showId) {
         ShowResponse response = showService.getShowById(showId);
@@ -83,12 +89,13 @@ public class ShowController {
         return ApiResponses.success(page);
     }
 
-    @GetMapping("/screen/{screenId}/date")
+    @GetMapping("/{theaterId}/screen/{screenId}/date")
     public ApiResponse<Page<ShowResponse>> getShowsByScreenAndDate(
+            @PathVariable UUID theaterId,
             @PathVariable UUID screenId,
             @RequestParam LocalDateTime date,
             @PageableDefault(size = 20, sort = "showStartTime") Pageable pageable) {
-        Page<ShowResponse> page = showService.getShowsByScreenAndDate(screenId, date, pageable);
+        Page<ShowResponse> page = showService.getShowsByScreenAndDate(theaterId, screenId, date, pageable);
         return ApiResponses.success(page);
     }
 
@@ -106,8 +113,11 @@ public class ShowController {
         return ApiResponses.success(page);
     }
 
-    // ====================== SEAT OPERATIONS ======================
-
+    /*
+     * ======================================================================
+     * - SEAT OPERATIONS -
+     * ======================================================================
+     */
     @PostMapping("/{showId}/seats/lock")
     public ApiResponse<List<ShowSeatResponse>> lockSeats(
             @PathVariable UUID showId,

@@ -9,8 +9,8 @@ import com.starone.bookshow.person.dto.PersonRequestDto;
 import com.starone.bookshow.person.entity.Person;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.MovieCreditPersonResponse;
-import com.starone.common.response.record.PersonResponse;
+import com.starone.springcommon.response.record.MovieCreditPersonResponse;
+import com.starone.springcommon.response.record.PersonResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface IPersonMapper extends BaseMapper<Person, PersonRequestDto, PersonRequestDto, PersonResponse> {

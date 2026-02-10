@@ -8,8 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.show.dto.ShowRequestDto;
-import com.starone.common.response.record.ShowResponse;
-import com.starone.common.response.record.ShowSeatResponse;
+import com.starone.springcommon.response.record.ShowResponse;
+import com.starone.springcommon.response.record.ShowSeatResponse;
 
 public interface IShowService {
     /**
@@ -45,7 +45,7 @@ public interface IShowService {
     /**
      * Get all shows for a screen/theater on a date
      */
-    Page<ShowResponse> getShowsByScreenAndDate(UUID screenId, LocalDateTime date, Pageable pageable);
+    Page<ShowResponse> getShowsByScreenAndDate(UUID theaterId,UUID screenId, LocalDateTime date, Pageable pageable);
 
     /**
      * Get today's shows (active)

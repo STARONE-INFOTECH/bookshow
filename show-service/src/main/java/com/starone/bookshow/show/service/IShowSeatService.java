@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.starone.common.response.record.ShowSeatResponse;
+import com.starone.springcommon.response.record.ShowSeatResponse;
 
 public interface IShowSeatService {
     /**

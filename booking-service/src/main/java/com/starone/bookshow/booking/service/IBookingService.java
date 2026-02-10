@@ -7,19 +7,19 @@ import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.booking.dto.BookingCancellationRequestDto;
 import com.starone.bookshow.booking.dto.BookingRequestDto;
-import com.starone.bookshow.booking.dto.BookingResponseDto;
+import com.starone.bookshow.booking.dto.BookingResponse;
 import com.starone.bookshow.booking.dto.PaymentConfirmRequestDto;
 
 public interface IBookingService {
     /**
      * Create a new booking - locks seats and returns pending booking
      */
-    BookingResponseDto createBooking(UUID userId, BookingRequestDto requestDto);
+    BookingResponse createBooking(UUID userId, BookingRequestDto requestDto);
 
     /**
      * Confirm payment success - marks booking CONFIRMED, generates ticket
      */
-    BookingResponseDto confirmPayment(UUID bookingId, PaymentConfirmRequestDto paymentDto);
+    BookingResponse confirmPayment(UUID bookingId, PaymentConfirmRequestDto paymentDto);
 
     /**
      * Handle payment failure
@@ -29,25 +29,25 @@ public interface IBookingService {
     /**
      * Cancel booking (user or timeout) - releases seats
      */
-    BookingResponseDto cancelBooking(UUID bookingId, BookingCancellationRequestDto requestDto);
+    BookingResponse cancelBooking(UUID bookingId, BookingCancellationRequestDto requestDto);
 
     /**
      * Get booking by ID (with full details)
      */
-    BookingResponseDto getBookingById(UUID bookingId);
+    BookingResponse getBookingById(UUID bookingId);
 
     /**
      * Get user's booking history
      */
-    Page<BookingResponseDto> getBookingsByUser(UUID userId, Pageable pageable);
+    Page<BookingResponse> getBookingsByUser(UUID userId, Pageable pageable);
 
     /**
      * Get bookings for a show (admin)
      */
-    Page<BookingResponseDto> getBookingsByShow(UUID showId, Pageable pageable);
+    Page<BookingResponse> getBookingsByShow(UUID showId, Pageable pageable);
 
     /**
      * Get booking by reference number (user lookup)
      */
-    BookingResponseDto getBookingByReference(String bookingReference);
+    BookingResponse getBookingByReference(String bookingReference);
 }

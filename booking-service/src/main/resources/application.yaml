@@ -1,3 +1,30 @@
 spring:
   application:
-    name: StarOne  Booking Service Application
+    name: bookshow-booking-service
+
+  profiles:
+    active: dev
+
+  jackson:
+    mapper:
+      accept-case-insensitive-properties: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/show_db
+    username: bookshow
+    password: devpassword
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update   # or validate in prod
+    show-sql: true
+
+server:
+  port: 8085
+
+LOG_DIR: logs
+logging:
+  level:
+    root: INFO
+

@@ -6,13 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.TheaterRequestDto;
-import com.starone.common.response.record.TheaterResponse;
-import com.starone.common.response.record.TheaterScreenShowResponse;
+import com.starone.springcommon.response.record.TheaterResponse;
 
 public interface ITheaterService {
+    
     TheaterResponse create(TheaterRequestDto requestDto);
-
-    TheaterResponse getById(UUID id);
 
     TheaterResponse update(UUID id, TheaterRequestDto requestDto);
 
@@ -20,10 +18,8 @@ public interface ITheaterService {
 
     TheaterResponse activate(UUID id);
 
-    Page<TheaterResponse> getAllActive(Pageable pageable);
+    TheaterResponse getById(UUID id);
 
-    Page<TheaterResponse> getByCity(String city, Pageable pageable);
+    Page<TheaterResponse> search(String city, boolean active, Pageable pageable);
 
-    Page<TheaterResponse> getByCityAndActive(String city, Pageable pageable);
-   
 }

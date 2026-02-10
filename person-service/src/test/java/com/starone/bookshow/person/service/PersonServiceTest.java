@@ -25,7 +25,7 @@ import com.starone.bookshow.person.helper.TestDataFactory;
 import com.starone.bookshow.person.mapper.IPersonMapper;
 import com.starone.bookshow.person.repository.IPersonRepository;
 import com.starone.bookshow.person.service.impl.PersonServiceImpl;
-import com.starone.common.response.record.PersonProfessionAddition;
+import com.starone.springcommon.response.record.PersonProfessionAddition;
 
 @ExtendWith(MockitoExtension.class)
 public class PersonServiceTest {

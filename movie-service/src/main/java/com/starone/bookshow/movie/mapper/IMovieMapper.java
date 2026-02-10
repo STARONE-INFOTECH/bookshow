@@ -8,7 +8,7 @@ import com.starone.bookshow.movie.dto.MovieRequestDto;
 import com.starone.bookshow.movie.entity.Movie;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.MovieResponse;
+import com.starone.springcommon.response.record.MovieResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface IMovieMapper extends BaseMapper<Movie, MovieRequestDto, MovieRequestDto, MovieResponse> {

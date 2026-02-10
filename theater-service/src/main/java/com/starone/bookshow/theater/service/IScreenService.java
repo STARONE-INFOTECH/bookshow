@@ -6,8 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.starone.bookshow.theater.dto.ScreenRequestDto;
-import com.starone.common.response.record.ScreenResponse;
-import com.starone.common.response.record.TheaterScreenShowResponse;
+import com.starone.springcommon.response.record.ScreenResponse;
+import com.starone.springcommon.response.record.TheaterScreenShowResponse;
 
 public interface IScreenService {
 
@@ -25,10 +25,5 @@ public interface IScreenService {
 
     Page<ScreenResponse> getActiveScreensByTheaterId(UUID theaterId, Pageable pageable);
 
-     /*
-     * ====================================================================
-     * --- Internal Service-To-Service usable methods with Feign client ---
-     * ====================================================================
-     */
-    TheaterScreenShowResponse getTheaterByScreenId(UUID screenId);
+    TheaterScreenShowResponse getTheaterByScreenId(UUID theaterId, UUID screenId);
 }

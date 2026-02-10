@@ -7,7 +7,7 @@ import com.starone.bookshow.theater.dto.ScreenRequestDto;
 import com.starone.bookshow.theater.entity.Screen;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.ScreenResponse;
+import com.starone.springcommon.response.record.ScreenResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface IScreenMapper extends

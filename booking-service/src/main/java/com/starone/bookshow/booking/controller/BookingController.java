@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.starone.bookshow.booking.dto.BookingCancellationRequestDto;
-import com.starone.bookshow.booking.dto.BookingRequestDto;
-import com.starone.bookshow.booking.dto.BookingResponseDto;
+import com.starone.bookshow.booking.dto.BookingResponse;
 import com.starone.bookshow.booking.dto.PaymentConfirmRequestDto;
 import com.starone.bookshow.booking.service.IBookingService;
-import com.starone.common.dto.ApiResponse;
+import com.starone.springcommon.response.record.ApiResponse;
+import com.starone.springcommon.response.util.ApiResponses;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -61,31 +61,31 @@ public class BookingController {
      * Get specific booking by ID (user can only access own)
      */
     @GetMapping("/{bookingId}")
-    public ApiResponse<BookingResponseDto> getBookingById(@PathVariable UUID bookingId) {
-        BookingResponseDto response = bookingService.getBookingById(bookingId);
-        return ApiResponse.success(response);
+    public ApiResponse<BookingResponse> getBookingById(@PathVariable UUID bookingId) {
+        BookingResponse response = bookingService.getBookingById(bookingId);
+        return ApiResponses.success(response);
     }
 
     /**
      * Get booking by reference number (for ticket lookup)
      */
     @GetMapping("/reference/{bookingReference}")
-    public ApiResponse<BookingResponseDto> getByReference(
+    public ApiResponse<BookingResponse> getByReference(
             @PathVariable String bookingReference) {
-        BookingResponseDto response = bookingService.getBookingByReference(bookingReference);
-        return ApiResponse.success(response);
+        BookingResponse response = bookingService.getBookingByReference(bookingReference);
+        return ApiResponses.success(response);
     }
 
     /**
      * Cancel booking (only if PENDING or within policy)
      */
     @PostMapping("/{bookingId}/cancel")
-    public ApiResponse<BookingResponseDto> cancelBooking(
+    public ApiResponse<BookingResponse> cancelBooking(
             @PathVariable UUID bookingId,
             @Valid @RequestBody BookingCancellationRequestDto requestDto) {
 
-        BookingResponseDto response = bookingService.cancelBooking(bookingId, requestDto);
-        return ApiResponse.success(response);
+        BookingResponse response = bookingService.cancelBooking(bookingId, requestDto);
+        return ApiResponses.success(response);
     }
 
     // ====================== PAYMENT GATEWAY WEBHOOK ======================
@@ -98,18 +98,18 @@ public class BookingController {
     public ApiResponse<Void> paymentWebhook(@RequestBody PaymentConfirmRequestDto paymentDto) {
         // Service will verify signature, find booking, confirm or fail
         // bookingService.handlePaymentWebhook(paymentDto);
-        return ApiResponse.success(null);
+        return ApiResponses.success(null);
     }
 
     // ====================== ADMIN ENDPOINTS ======================
 
    // @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/show/{showId}")
-    public ApiResponse<Page<BookingResponseDto>> getBookingsByShow(
+    public ApiResponse<Page<BookingResponse>> getBookingsByShow(
             @PathVariable UUID showId,
             @PageableDefault(size = 50, sort = "bookingTime") Pageable pageable) {
 
-        Page<BookingResponseDto> page = bookingService.getBookingsByShow(showId, pageable);
-        return ApiResponse.success(page);
+        Page<BookingResponse> page = bookingService.getBookingsByShow(showId, pageable);
+        return ApiResponses.success(page);
     }
 }

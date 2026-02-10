@@ -8,7 +8,7 @@ import com.starone.bookshow.movie.dto.MovieCreditRequestDto;
 import com.starone.bookshow.movie.entity.MovieCredit;
 import com.starone.common.mapper.BaseMapper;
 import com.starone.common.mapper.CommonMapperConfig;
-import com.starone.common.response.record.MovieCreditResponse;
+import com.starone.springcommon.response.record.MovieCreditResponse;
 
 @Mapper(componentModel = "spring", config = CommonMapperConfig.class)
 public interface IMovieCreditMapper
